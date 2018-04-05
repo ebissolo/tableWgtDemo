@@ -1,0 +1,13 @@
+.container {
+	position: absolute;;
+	overflow: hidden;
+	border: 1px solid;
+}
+.wgt {
+	position: absolute;
+	text-align: center;
+	font-size: 2em;
+}
+.row {
+	position: absolute;
+}
