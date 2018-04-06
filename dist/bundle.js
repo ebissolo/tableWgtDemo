@@ -174,6 +174,7 @@ var TableWgt = function () {
 		this.elem.style.height = this.height + "px";
 
 		this.rowPrototypes = options.rowPrototypes;
+		this.globalStrokeWidth = 1;
 
 		document.body.appendChild(this.elem);
 
@@ -216,6 +217,22 @@ var TableWgt = function () {
 			return wgts;
 		}
 	}, {
+		key: "renderRowsPrototypes",
+		value: function renderRowsPrototypes() {
+			for (var i = 0; i < this.m_table.rows.length; i++) {
+				var div = document.createElement("div");
+				div.classList.add("row");
+
+				div.style.top = this.m_table.rows[i].top + "px";
+				div.style.height = this.m_table.rows[i].height + "px";
+				div.style.width = this.width + "px";
+
+				div.setAttribute("row-index", i);
+
+				this.elem.appendChild(div);
+			}
+		}
+	}, {
 		key: "defineGeometryAndScrollbar",
 		value: function defineGeometryAndScrollbar() {
 			var rowNumber = this.wgts.length; // from table widget
@@ -247,6 +264,12 @@ var TableWgt = function () {
 
 				this.m_table.rows.push(row);
 			}
+
+			this.renderRowsPrototypes();
+			if (this.scrollbar == null) {
+				// add scrollbar
+				this.addScrollbar();
+			}
 		}
 	}, {
 		key: "initPrototypesAndGeometry",
@@ -267,41 +290,12 @@ var TableWgt = function () {
 
 				var wgts = this.getWidgetsOfRow(i);
 
-				//let counter = 0;
-
-				//this.m_protoClonedWgts = []; // eq to clear()
-
-				// for( let j = 0; j < wgts.length; j++ ) {
-				// 	let pClone = Object.assign( {}, wgts[j] );
-				// 	Object.setPrototypeOf( pClone, GenericWgt.prototype );
-
-				// 	this.m_protoClonedWgts.push( pClone );
-				// }
-
 				proto.rowWidgets = wgts;
 				protos.rows.push(proto); // in runtime it's used qt "push_back"
 			}
 
 			this.scrollBy(0);
 			this.scrollTo(0);
-		}
-	}, {
-		key: "render",
-		value: function render(row, left, top, width, height) {
-			console.log("--> render row !");
-
-			var div = document.createElement("div");
-
-			div.classList.add("row");
-			div.style.left = left + "px";
-			div.style.top = top + "px";
-			div.style.width = width + "px";
-			div.style.height = height + "px";
-
-			for (var i = 0; i < row.rowWidgets.length; i++) {
-				div.appendChild(row.rowWidgets[i].elem);
-			}
-			this.elem.appendChild(div);
 		}
 	}, {
 		key: "lowerBound",
@@ -314,6 +308,54 @@ var TableWgt = function () {
 						return i - 1;
 					}
 				}
+			}
+		}
+	}, {
+		key: "checkOutOfViewPrototypes",
+		value: function checkOutOfViewPrototypes(startIndex, endIndex) {
+			for (var i = 0; i < this.m_rowPrototypes.length; i++) {
+				var protos = this.m_rowPrototypes[i];
+				for (var j = 0; j < protos.rows.length;) {
+					var row = protos.rows[j];
+
+					if (row.free) {
+						break;
+					}
+
+					if (row.row < startIndex) {
+						/**
+       *  cpp: row.free = true;
+      	UninstallRuntimeBackground(row.row);
+      	row.freeRow(viewController);
+      	viewController->unregisterDelegate(row.row);
+      	row.row = -1;
+      		protos.rows.push_back(row);
+      	r = protos.rows.erase(r);
+      	continue;
+       */
+						row.free = true;
+						row.freeRow();
+						//row.unregisterDelegate();
+						row.row = -1;
+						protos.rows.splice(j, 1, row); // cpp: protos.rows.push_back(row); ??
+						//      r = protos.rows.erase(r);
+						continue;
+					}
+
+					if (row.row >= endIndex) {
+						for (var k = j; k < protos.rows.length; k++) {
+							var _row = protos.rows[k];
+
+							_row.free = true;
+							_row.freeRow();
+							//row.unregisterDelegate(); //?
+							_row.row = -1;
+						}
+						break;
+					}
+					j++;
+				}
+				protos.iterator = 0;
 			}
 		}
 	}, {
@@ -345,51 +387,12 @@ var TableWgt = function () {
 			return r;
 		}
 	}, {
-		key: "checkOutOfViewPrototypes",
-		value: function checkOutOfViewPrototypes(startIndex, endIndex) {
-			for (var i = 0; i < this.m_rowPrototypes.length; i++) {
-				var protos = this.m_rowPrototypes[i];
-				for (var j = 0; j < protos.rows.length;) {
-					var row = protos.rows[j];
+		key: "renderRow",
+		value: function renderRow(row) {
+			console.log("--> row index: " + row.row);
 
-					if (row.free) {
-						break;
-					}
-
-					if (row.row < startIndex) {
-						/**
-       *  cpp: row.free = true;
-      	UninstallRuntimeBackground(row.row);
-      	row.freeRow(viewController);
-      	viewController->unregisterDelegate(row.row);
-      	row.row = -1;
-      		protos.rows.push_back(row);
-      	r = protos.rows.erase(r);
-      	continue;
-       */
-						row.free = true;
-						row.freeRow();
-						//row.unregisterDelegate();
-						row.row = -1;
-						protos.rows.splice(j, 1, row); // cpp: protos.rows.push_back(row);
-						//      r = protos.rows.erase(r);
-						continue;
-					}
-
-					if (row.row >= endIndex) {
-						for (var k = j; k < protos.rows.length; k++) {
-							var _row = protos.rows[k];
-
-							_row.free = true;
-							_row.freeRow();
-							//row.unregisterDelegate();
-							_row.row = -1;
-						}
-						break;
-					}
-					j++;
-				}
-				protos.iterator = 0;
+			for (var i = 0; i < row.rowWidgets.length; i++) {
+				this.elem.childNodes[row.row].appendChild(row.rowWidgets[i].elem);
 			}
 		}
 	}, {
@@ -402,16 +405,17 @@ var TableWgt = function () {
 				var rowType = parseInt(modelRow["_t"]);
 				protos = this.m_rowPrototypes[rowType];
 
-				if (protos.iterator == protos.rows.length - 1) {
+				if (protos.iterator == protos.rows.length) {
+					// scanIterator
 					var r = this.cloneRow(rowType, i);
 
 					protos.rows.push(r);
-					protos.iterator = protos.rows.length - 2;
+					protos.iterator = protos.rows.length - 1;
 				} else {
 					var _row2 = protos.rows[protos.iterator];
 
 					if (!_row2.free && _row2.row != i) {
-						var lastRow = protos.rows[protos.rows.length - 2];
+						var lastRow = protos.rows[protos.rows.length - 1];
 
 						if (lastRow.free) {
 							protos.rows.splice(i, 0, lastRow);
@@ -440,7 +444,7 @@ var TableWgt = function () {
 
 					var rowIndex = i;
 
-					this.render(row, left, top, width, height);
+					this.renderRow(row);
 
 					// Activation datalinks, multilanguage etc.
 					// ...
@@ -463,7 +467,7 @@ var TableWgt = function () {
 			var tableModel = this.model;
 			var lastRow = this.m_table.rows[this.m_table.rows.length - 1];
 
-			var startPos = scrollPos; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize;
+			var startPos = scrollPos - this.globalStrokeWidth; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize;
 			var endPos = scrollPos + viewHeight;
 
 			var dummyStartRow = { // cpp: TableGeometry::Row& row
@@ -492,10 +496,6 @@ var TableWgt = function () {
 
 			this.defineGeometryAndScrollbar();
 			this.initPrototypesAndGeometry();
-
-			if (this.scrollbar == null) {
-				this.addScrollbar();
-			}
 		}
 	}]);
 

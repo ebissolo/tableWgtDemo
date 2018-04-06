@@ -6,5 +6,5 @@ export default class RowPrototype {
 	}
 	freeRow() {
 		console.log( "--> freeRow !" );
-	}
+ 	}
 }
