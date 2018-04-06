@@ -36,8 +36,8 @@ window.tableWgt = new TableWgt( "tableWgt", {
  }); 
 
 // Add Generic widgets
-let wgt1 = new GenericWgt( "wgt1", { w: 500, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt );
-let wgt2 = new GenericWgt( "wgt2", { w: 500, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt );
+let wgt1 = new GenericWgt( "wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt );
+let wgt2 = new GenericWgt( "wgt2", { w: 800, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt );
 
 tableWgt.model = model;
 

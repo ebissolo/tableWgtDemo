@@ -1,8 +1,8 @@
-import PerfectScrollbar from "perfect-scrollbar";
 import TableGeometry from "./TableGeometry.js";
 import RowPrototype from "./RowPrototype.js";
 import RowPrototypes from "./RowPrototypes.js";
 import GenericWgt from "./GenericWgt.js";
+import JMScrollbar from "./JMScrollbar.js";
 
 
 export default class TableWgt {
@@ -31,14 +31,11 @@ export default class TableWgt {
 	}
 
 	addScrollbar( scrollbarOptions ) {
-		this.scrollbar = new PerfectScrollbar( this.elem, scrollbarOptions );
-
-		let self = this;
-		this.elem.addEventListener( "ps-scroll-y", ( e ) => {
-			console.log( "--> attach scrollbar listerner on y axis" );
-			self.scrollTo( self.scrollbar.lastScrollTop );
-			self.scrollbar.update();
-		});
+		let maxContentHeight = 0;
+		for( let i = 0; i < this.m_table.rows.length; i++ ) {
+			maxContentHeight += this.m_table.rows[i].height;
+		}
+		this.scrollbar = new JMScrollbar( this.elem, { scrollContentWidth: this.width * 2, scrollContentHeight: maxContentHeight } );
 	}
 
 	addWidget( wgt ) {

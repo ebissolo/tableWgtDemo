@@ -1,0 +1,18 @@
+.x-rail {
+	position: absolute;
+	background-color: white;
+	opacity: 0.9;
+}
+.y-rail {
+	position: absolute;
+	background-color: white;
+	opacity: 0.9;
+}
+.x-rail-thumb {
+	position: absolute;
+	background-color: gray;
+}
+.y-rail-thumb {
+	position: absolute;
+	background-color: gray;
+}
