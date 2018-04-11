@@ -2,7 +2,9 @@ import TableGeometry from "./TableGeometry.js";
 import RowPrototype from "./RowPrototype.js";
 import RowPrototypes from "./RowPrototypes.js";
 import GenericWgt from "./GenericWgt.js";
-import JMScrollbar from "./JMScrollbar.js";
+// import JMScrollbar from "./JMScrollbar.js";
+// import PerfectScrollbar from "perfect-scrollbar";
+import PerfectScrollbar from "../lib/perfect-scrollbar"
 
 
 export default class TableWgt {
@@ -12,7 +14,12 @@ export default class TableWgt {
 		this.elem = document.getElementById( "tableWgt" );
 		this.width = options.width;
 		this.height = options.height;
+		this.left = options.left;
+		this.top = options.top;
 		this.id = this.elem.id = id;
+		this.clusterSize = 4;
+
+		this.rowsToRender = [];
 
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
@@ -35,7 +42,10 @@ export default class TableWgt {
 		for( let i = 0; i < this.m_table.rows.length; i++ ) {
 			maxContentHeight += this.m_table.rows[i].height;
 		}
-		this.scrollbar = new JMScrollbar( this.elem, { scrollContentWidth: this.width * 2, scrollContentHeight: maxContentHeight } );
+		this.scrollbar = new PerfectScrollbar( this.elem );
+		this.elem.addEventListener( "ps-scroll-y", () => {
+			this.scrollTo( this.elem.scrollTop );
+		} );
 	}
 
 	addWidget( wgt ) {
@@ -55,20 +65,13 @@ export default class TableWgt {
 		return wgts;	
 	}
 
-	renderRowsPrototypes() {
-		for( let i = 0; i < this.m_table.rows.length; i++ ) {
-			let div = document.createElement( "div" );
-			div.classList.add( "row" );
-
-			div.style.top = this.m_table.rows[i].top + "px";
-			div.style.height = this.m_table.rows[i].height + "px";
-			div.style.width = this.width + "px";
-
-			div.setAttribute( "row-index", i );
-
-			this.elem.appendChild( div );
-		}
-	}
+	// renderRowsPrototypes( contentArea ) {
+	// 	for( let i = 0; i < this.clusterSize; i++ ) {
+	// 		let div = document.createElement( "div" );
+	// 		div.classList.add( "row" );
+	// 		contentArea.appendChild( div );
+	// 	}
+	// }
 
 	defineGeometryAndScrollbar() {
 		let rowNumber = this.wgts.length; // from table widget
@@ -83,6 +86,7 @@ export default class TableWgt {
 		this.m_table.clear();
 		
 		let top = 0;
+		let totalHeight = 0;
 
 		// Init rows geometry
 		for( let i = 0; i < tableModel.length - 1; i++ ) {
@@ -99,9 +103,19 @@ export default class TableWgt {
 			top += row.height;
 
 			this.m_table.rows.push(row);
+
+			totalHeight += row.height;
 		}
 
-		this.renderRowsPrototypes();
+		// render a contentArea
+		const div = document.createElement( "div" );
+		div.id = this.id + "_contentArea";
+		div.style.height = totalHeight + "px";
+
+		//this.renderRowsPrototypes( div );
+
+		this.elem.appendChild( div );
+
 		if( this.scrollbar == null ) { // add scrollbar
 			this.addScrollbar();
 		}
@@ -134,12 +148,8 @@ export default class TableWgt {
 
 	lowerBound( rows, row ) {
 		for( let i = 0; i < rows.length; i++ ) {
-			if( rows[i].top >= row.top ) {
-				if ( i == 0 ) {
-					return i;
-				} else {
-					return i-1;
-				}
+			if( rows[i].top > row.top ) {
+				return i;
 			}
 		}  
 	}
@@ -167,11 +177,14 @@ export default class TableWgt {
 						continue;
 					 */
 					row.free = true;
-					row.freeRow();
+					row.freeRow() // do nothing
 					//row.unregisterDelegate();
 					row.row = -1;
-					protos.rows.splice( j, 1, row ); // cpp: protos.rows.push_back(row); ??
+					//protos.rows.splice( j, 1 ); // cpp: protos.rows.push_back(row); ??
 													 //      r = protos.rows.erase(r);
+					protos.rows.push( row );
+					protos.rows.splice( j, 1 );
+					// j++;
 					continue;
 				}
 
@@ -180,7 +193,7 @@ export default class TableWgt {
 						let row = protos.rows[k];
 
 						row.free = true;
-						row.freeRow();
+						row.freeRow(); // do nothing
 						//row.unregisterDelegate(); //?
 						row.row = -1;
 					}
@@ -218,16 +231,62 @@ export default class TableWgt {
 		return r;
 	}
 
-	renderRow( row ) {
-		console.log( "--> row index: " + row.row );
+	deleteRowElements() {
+		let contentArea = document.getElementById( this.id + "_contentArea" );
+		let childrenLen = contentArea.childNodes.length;
+		for( let i = 0; i < childrenLen; i++ ) {		
+			contentArea.removeChild( contentArea.firstChild );
+		}
+	}
+
+	// getRowElement( row, bounds ) {
+	// 	const { width, height, left, top } = bounds;
+
+	// 	let div = document.createElement( "div" );
+	// 	div.classList.add( "row" );
+
+	// 	for( let i = 0; i < row.rowWidgets.length; i++ ) {
+	// 		div.style.width = width + "px";
+	// 		div.style.height = height + "px";
+	// 		div.style.left = left + "px";
+	// 		div.style.top = top + "px";
+	// 		div.appendChild( row.rowWidgets[i].elem );
+	// 	}
+	// 	return div;
+	// }
+
+	renderRowElements() {
+		let contentArea = document.getElementById( this.id + "_contentArea" );
+		for( let i = 0; i < this.rowsToRender.length; i++ ) {
+			let rowElem = this.rowsToRender[i];
+			
+			// bounds
+			rowElem.style.width = this.width + "px";
+			rowElem.style.height = this.m_table.rows[i].height + "px";
+			rowElem.style.left = this.elem.scrollLeft + "px";
+			rowElem.style.top = ( this.m_table.rows[i].top + this.elem.scrollTop ) + "px";
+
+			contentArea.appendChild( rowElem );
+		}
+	}
+
+	getElementFromRowProto( row ) {
+		let div = document.createElement( "div" );
+		div.classList.add( "row" );
+		div.setAttribute( "row-index", row.row );
 
 		for( let i = 0; i < row.rowWidgets.length; i++ ) {
-			this.elem.childNodes[row.row].appendChild( row.rowWidgets[i].elem );
+			div.appendChild( row.rowWidgets[i].elem );
 		}
+		return div;
 	}
 
 	clonePrototypes( startIndex, endIndex ) {
 		let protos;
+		let isChanged = false;
+
+		console.log( "-------------------------------" )
+
 		for ( let i = startIndex; i < endIndex; i++ ) {
 
 			let modelRow = this.model[i+1];
@@ -247,7 +306,7 @@ export default class TableWgt {
 					let lastRow = protos.rows[protos.rows.length - 1];
 
 					if ( lastRow.free ) {
-						protos.rows.splice( i, 0, lastRow );
+						protos.rows.splice( protos.iterator, 0, lastRow );
 						protos.rows.pop(); // cpp: protos.rows.removeLast();
 					} else {
 						let r = this.cloneRow( rowType, i );
@@ -266,21 +325,49 @@ export default class TableWgt {
 
 			let wgts = row.rowWidgets;
 
-			let counter = 0;
 			if ( row.free ) {
 				row.free = false;
 				row.row = i;
 				
 				let rowIndex = i;
 
-				this.renderRow( row );
+				if( this.rowsToRender.length != this.clusterSize ) {
+					this.rowsToRender.push( this.getElementFromRowProto( row ) );
+				} else {
+					if( row.row < parseInt( this.rowsToRender[0].getAttribute( "row-index" ) ) ) {
+						this.rowsToRender.pop();
+						this.rowsToRender.unshift( this.getElementFromRowProto( row ) );
+					} else if( row.row > parseInt( this.rowsToRender[this.clusterSize - 1].getAttribute( "row-index" ) ) ) {
+						this.rowsToRender.shift();
+						this.rowsToRender.push( this.getElementFromRowProto( row ) );
+					}
+				}
 
 				// Activation datalinks, multilanguage etc.
 				// ...
+
+				isChanged = true;
+			}
+
+			if( isChanged ) {
+
+				// Log
+				console.log( "------------- indexes in view:" );
+				for( let i = 0; i < this.rowsToRender.length; i++ ) {
+					console.log( "" + parseInt( this.rowsToRender[i].getAttribute( "row-index" ) ) );
+				}
+				console.log( "------------------------------" );
+
+				this.deleteRowElements();
+				this.renderRowElements();
 			}
 
 			protos.iterator++;
 		}
+
+		// Log
+		console.log( "from " + startIndex + "index to " + endIndex + "index." );
+		console.log( "------------------------------------------" );
 	}
 
 	scrollBy( scrollXPos, scrollYPos ) {
@@ -294,7 +381,7 @@ export default class TableWgt {
 		let tableModel = this.model;
 		let lastRow = this.m_table.rows[this.m_table.rows.length-1];
 
-		let startPos = scrollPos - this.globalStrokeWidth; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize;
+		let startPos = scrollPos - this.globalStrokeWidth; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize; ?? doubt
 		let endPos = scrollPos + viewHeight;
 
 		let dummyStartRow = { 	  // cpp: TableGeometry::Row& row
@@ -304,14 +391,12 @@ export default class TableWgt {
 		};
 		dummyStartRow.top = startPos;
 
-		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow ) - 0; // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
+		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow ); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
 		let endIndex = startIndex;
 
 		for(;endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex
 
-		console.log( "--> startIndex: " + startIndex + " endIndex: " + endIndex );
-
-		startIndex = Math.max( startIndex-1, 0 );
+		startIndex = Math.max( startIndex - 1, 0 );
 
 		this.checkOutOfViewPrototypes( startIndex, endIndex );
 		this.clonePrototypes( startIndex, endIndex );
