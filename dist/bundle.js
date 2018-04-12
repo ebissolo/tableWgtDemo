@@ -185,10 +185,18 @@ var TableWgt = function () {
 		this.m_table = new _TableGeometry2.default();
 		this.m_rowPrototypes = [];
 
+		this.createContentArea();
 		pushWidget(this);
 	}
 
 	_createClass(TableWgt, [{
+		key: "createContentArea",
+		value: function createContentArea() {
+			var div = document.createElement("div");
+			div.id = this.id + "_contentArea";
+			this.elem.appendChild(div);
+		}
+	}, {
 		key: "addScrollbar",
 		value: function addScrollbar(scrollbarOptions) {
 			var _this = this;
@@ -205,6 +213,11 @@ var TableWgt = function () {
 				_this.scrollTo(_this.elem.scrollTop);
 			});
 		}
+
+		/**
+   * @param  {} wgt
+   */
+
 	}, {
 		key: "addWidget",
 		value: function addWidget(wgt) {
@@ -264,11 +277,9 @@ var TableWgt = function () {
 				totalHeight += row.height;
 			}
 
-			// render a contentArea
-			var div = document.createElement("div");
-			div.id = this.id + "_contentArea";
-			div.style.height = totalHeight + "px";
-			this.elem.appendChild(div);
+			// Modifies contentArea height
+			var contentArea = document.getElementById(this.id + "_contentArea");
+			contentArea.style.height = totalHeight + "px";
 
 			if (this.scrollbar == null) {
 				// add scrollbar
@@ -300,6 +311,12 @@ var TableWgt = function () {
 			this.scrollBy(0);
 			this.scrollTo(0);
 		}
+
+		/**
+   * @param  {} rows
+   * @param  {} row
+   */
+
 	}, {
 		key: "lowerBound",
 		value: function lowerBound(rows, row) {
@@ -307,49 +324,6 @@ var TableWgt = function () {
 				if (rows[i].top > row.top) {
 					return i;
 				}
-			}
-		}
-
-		/**
-   * @param  {} startIndex
-   * @param  {} endIndex
-   */
-
-	}, {
-		key: "checkOutOfViewPrototypes",
-		value: function checkOutOfViewPrototypes(startIndex, endIndex) {
-
-			for (var i = 0; i < this.m_rowPrototypes.length; i++) {
-				var protos = this.m_rowPrototypes[i];
-				for (var j = 0; j < protos.rows.length;) {
-					var row = protos.rows[j];
-
-					if (row.free) {
-						break;
-					}
-
-					if (row.row < startIndex) {
-						row.free = true;
-						row.freeRow(); // do nothing by now ?? doubt
-						row.row = -1;
-						protos.rows.push(row);
-						protos.rows.shift();
-						continue;
-					}
-
-					if (row.row >= endIndex) {
-						for (var k = j; k < protos.rows.length; k++) {
-							var _row = protos.rows[k];
-
-							_row.free = true;
-							_row.freeRow(); // do nothing by now ?? doubt
-							_row.row = -1;
-						}
-						break;
-					}
-					j++;
-				}
-				protos.iterator = 0;
 			}
 		}
 
@@ -426,8 +400,55 @@ var TableWgt = function () {
    */
 
 	}, {
+		key: "checkOutOfViewPrototypes",
+		value: function checkOutOfViewPrototypes(startIndex, endIndex) {
+
+			for (var i = 0; i < this.m_rowPrototypes.length; i++) {
+				var protos = this.m_rowPrototypes[i];
+				for (var j = 0; j < protos.rows.length;) {
+					var row = protos.rows[j];
+
+					if (row.free) {
+						break;
+					}
+
+					if (row.row < startIndex) {
+						row.free = true;
+						row.freeRow(); // do nothing by now ?? doubt
+						row.row = -1;
+
+						console.log("INCREMENTED PROTOS ROWS --> check out of view");
+						protos.rows.push(row);
+						protos.rows.shift();
+						continue;
+					}
+
+					if (row.row >= endIndex) {
+						for (var k = j; k < protos.rows.length; k++) {
+							var _row = protos.rows[k];
+
+							_row.free = true;
+							_row.freeRow(); // do nothing by now ?? doubt
+							_row.row = -1;
+						}
+						break;
+					}
+					j++;
+				}
+				protos.iterator = 0;
+			}
+		}
+
+		/**
+   * @param  {} startIndex
+   * @param  {} endIndex
+   */
+
+	}, {
 		key: "clonePrototypes",
 		value: function clonePrototypes(startIndex, endIndex) {
+			var _this2 = this;
+
 			var isChanged = false;
 			var rowsToRender = [];
 
@@ -441,6 +462,7 @@ var TableWgt = function () {
 					// scanIterator
 					var r = this.cloneRow(rowType, i);
 
+					console.log("INCREMENTED PROTOS ROWS --> clonePrototypes");
 					protos.rows.push(r);
 					protos.iterator = protos.rows.length - 1;
 				} else {
@@ -457,6 +479,7 @@ var TableWgt = function () {
 						} else {
 							var _r2 = this.cloneRow(rowType, i);
 
+							console.log("INCREMENTED PROTOS ROWS --> clonePrototypes");
 							protos.rows.splice(protos.iterator, 0, _r2); // replace row proto
 						}
 					}
@@ -484,14 +507,27 @@ var TableWgt = function () {
 				console.log("------------------------------");
 
 				this.deleteRowElements();
-				this.renderRowElements(rowsToRender);
+
+				requestAnimationFrame(function () {
+					_this2.renderRowElements(rowsToRender);
+				});
 			}
 		}
+
+		/**
+   * @param  {} scrollXPos
+   */
+
 	}, {
 		key: "scrollBy",
-		value: function scrollBy(scrollXPos, scrollYPos) {
+		value: function scrollBy(scrollXPos) {
 			console.log("--> scrollBy() call !!");
 		}
+
+		/**
+   * @param  {} scrollPos
+   */
+
 	}, {
 		key: "scrollTo",
 		value: function scrollTo(scrollPos) {

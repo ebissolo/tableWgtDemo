@@ -4,7 +4,6 @@ import RowPrototypes from "./RowPrototypes.js";
 import GenericWgt from "./GenericWgt.js";
 import PerfectScrollbar from "../lib/perfect-scrollbar";
 
-
 export default class TableWgt {
 	constructor( id, options ) {
 		console.log( "--> construct Table widget !" );
@@ -29,7 +28,14 @@ export default class TableWgt {
 		this.m_table = new TableGeometry();
 		this.m_rowPrototypes = [];
 
+		this.createContentArea();
 		pushWidget( this );
+	}
+
+	createContentArea() {
+		const div = document.createElement( "div" );
+		div.id = this.id + "_contentArea";
+		this.elem.appendChild( div );
 	}
 
 	addScrollbar( scrollbarOptions ) {
@@ -45,7 +51,10 @@ export default class TableWgt {
 			this.scrollTo( this.elem.scrollTop );
 		} );
 	}
-
+	
+	/**
+	 * @param  {} wgt
+	 */
 	addWidget( wgt ) {
 		if( this.wgts == null )
 			this.wgts = [];
@@ -100,11 +109,9 @@ export default class TableWgt {
 			totalHeight += row.height;
 		}
 
-		// render a contentArea
-		const div = document.createElement( "div" );
-		div.id = this.id + "_contentArea";
-		div.style.height = totalHeight + "px";
-		this.elem.appendChild( div );
+		// Modifies contentArea height
+		let contentArea = document.getElementById( this.id + "_contentArea" );
+		contentArea.style.height = totalHeight + "px";
 
 		if( this.scrollbar == null ) { // add scrollbar
 			this.addScrollbar();
@@ -134,53 +141,17 @@ export default class TableWgt {
 		this.scrollBy( 0 );
 		this.scrollTo( 0 );
 	}
-
+	
+	/**
+	 * @param  {} rows
+	 * @param  {} row
+	 */
 	lowerBound( rows, row ) {
 		for( let i = 0; i < rows.length; i++ ) {
 			if( rows[i].top > row.top ) {
 				return i;
 			}
 		}  
-	}
-	
-	/**
-	 * @param  {} startIndex
-	 * @param  {} endIndex
-	 */
-	checkOutOfViewPrototypes( startIndex, endIndex ) {
-
-		for( let i = 0; i < this.m_rowPrototypes.length; i++ ) { 
-			let protos = this.m_rowPrototypes[i];
-			for( let j = 0; j < protos.rows.length; ) {
-				let row = protos.rows[j];
-
-				if ( row.free ) {
-					break;
-				}
-
-				if ( row.row < startIndex ) {
-					row.free = true;
-					row.freeRow() // do nothing by now ?? doubt
-					row.row = -1;
-					protos.rows.push( row );
-					protos.rows.shift();
-					continue;
-				}
-
-				if ( row.row >= endIndex ) {
-					for( let k = j; k < protos.rows.length; k++ ) {
-						let row = protos.rows[k];
-
-						row.free = true;
-						row.freeRow(); // do nothing by now ?? doubt
-						row.row = -1;
-					}
-					break;
-				}
-				j++;
-			}
-			protos.iterator = 0;
-		}
 	}
 
 	/**
@@ -247,6 +218,48 @@ export default class TableWgt {
 	 * @param  {} startIndex
 	 * @param  {} endIndex
 	 */
+	checkOutOfViewPrototypes( startIndex, endIndex ) {
+
+		for( let i = 0; i < this.m_rowPrototypes.length; i++ ) { 
+			let protos = this.m_rowPrototypes[i];
+			for( let j = 0; j < protos.rows.length; ) {
+				let row = protos.rows[j];
+
+				if ( row.free ) {
+					break;
+				}
+
+				if ( row.row < startIndex ) {
+					row.free = true;
+					row.freeRow() // do nothing by now ?? doubt
+					row.row = -1;
+
+					console.log( "INCREMENTED PROTOS ROWS --> check out of view" );
+					protos.rows.push( row );
+					protos.rows.shift();
+					continue;
+				}
+
+				if ( row.row >= endIndex ) {
+					for( let k = j; k < protos.rows.length; k++ ) {
+						let row = protos.rows[k];
+
+						row.free = true;
+						row.freeRow(); // do nothing by now ?? doubt
+						row.row = -1;
+					}
+					break;
+				}
+				j++;
+			}
+			protos.iterator = 0;
+		}
+	}
+
+	/**
+	 * @param  {} startIndex
+	 * @param  {} endIndex
+	 */
 	clonePrototypes( startIndex, endIndex ) {
 		let isChanged = false;
 		let rowsToRender = [];
@@ -260,6 +273,7 @@ export default class TableWgt {
 			if ( protos.iterator == protos.rows.length )  { // scanIterator
 				let r = this.cloneRow( rowType, i );
 
+				console.log( "INCREMENTED PROTOS ROWS --> clonePrototypes" );
 				protos.rows.push( r );
 				protos.iterator = protos.rows.length - 1;
 
@@ -277,6 +291,7 @@ export default class TableWgt {
 					} else {
 						let r = this.cloneRow( rowType, i );
 
+						console.log( "INCREMENTED PROTOS ROWS --> clonePrototypes" );
 						protos.rows.splice( protos.iterator, 0, r ); // replace row proto
 					}
 				}
@@ -304,14 +319,23 @@ export default class TableWgt {
 			console.log( "------------------------------" );
 
 			this.deleteRowElements();
-			this.renderRowElements( rowsToRender );
+			
+			requestAnimationFrame( () => {
+				this.renderRowElements( rowsToRender );
+			} );
 		}
 	}
-
-	scrollBy( scrollXPos, scrollYPos ) {
+	
+	/**
+	 * @param  {} scrollXPos
+	 */
+	scrollBy( scrollXPos ) {
 		console.log( "--> scrollBy() call !!" );
 	}
-
+	
+	/**
+	 * @param  {} scrollPos
+	 */
 	scrollTo( scrollPos ) {
 		console.log( "--> scrollTo() call !!" );
 
