@@ -107,18 +107,18 @@ window.tableWgt = new _TableWgt2.default("tableWgt", {
 	{
 		id: "wgt1",
 		cl: "GenericWgt",
-		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }
+		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }
 	}], [// second row
 	{
 		id: "wgt2",
 		cl: "GenericWgt",
-		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }
+		opt: { w: 500, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }
 	}]]
 });
 
 // Add Generic widgets
-var wgt1 = new _GenericWgt2.default("wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt);
-var wgt2 = new _GenericWgt2.default("wgt2", { w: 800, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt);
+var wgt1 = new _GenericWgt2.default("wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }, tableWgt);
+var wgt2 = new _GenericWgt2.default("wgt2", { w: 800, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }, tableWgt);
 
 tableWgt.model = _data.model;
 
@@ -226,15 +226,6 @@ var TableWgt = function () {
 			}
 			return wgts;
 		}
-
-		// renderRowsPrototypes( contentArea ) {
-		// 	for( let i = 0; i < this.clusterSize; i++ ) {
-		// 		let div = document.createElement( "div" );
-		// 		div.classList.add( "row" );
-		// 		contentArea.appendChild( div );
-		// 	}
-		// }
-
 	}, {
 		key: "defineGeometryAndScrollbar",
 		value: function defineGeometryAndScrollbar() {
@@ -275,9 +266,6 @@ var TableWgt = function () {
 			var div = document.createElement("div");
 			div.id = this.id + "_contentArea";
 			div.style.height = totalHeight + "px";
-
-			//this.renderRowsPrototypes( div );
-
 			this.elem.appendChild(div);
 
 			if (this.scrollbar == null) {
@@ -316,6 +304,7 @@ var TableWgt = function () {
 		value: function lowerBound(rows, row) {
 			for (var i = 0; i < rows.length; i++) {
 				if (rows[i].top > row.top) {
+					console.log("lower bound selects row: " + i);
 					return i;
 				}
 			}
@@ -350,7 +339,8 @@ var TableWgt = function () {
 						//protos.rows.splice( j, 1 ); // cpp: protos.rows.push_back(row); ??
 						//      r = protos.rows.erase(r);
 						protos.rows.push(row);
-						protos.rows.splice(j, 1);
+						//protos.rows.splice( j, 1 );
+						protos.rows.shift();
 						// j++;
 						continue;
 					}
@@ -408,35 +398,19 @@ var TableWgt = function () {
 				contentArea.removeChild(contentArea.firstChild);
 			}
 		}
-
-		// getRowElement( row, bounds ) {
-		// 	const { width, height, left, top } = bounds;
-
-		// 	let div = document.createElement( "div" );
-		// 	div.classList.add( "row" );
-
-		// 	for( let i = 0; i < row.rowWidgets.length; i++ ) {
-		// 		div.style.width = width + "px";
-		// 		div.style.height = height + "px";
-		// 		div.style.left = left + "px";
-		// 		div.style.top = top + "px";
-		// 		div.appendChild( row.rowWidgets[i].elem );
-		// 	}
-		// 	return div;
-		// }
-
 	}, {
 		key: "renderRowElements",
 		value: function renderRowElements() {
 			var contentArea = document.getElementById(this.id + "_contentArea");
 			for (var i = 0; i < this.rowsToRender.length; i++) {
 				var rowElem = this.rowsToRender[i];
+				var idx = parseInt(rowElem.getAttribute("row-index"));
 
 				// bounds
 				rowElem.style.width = this.width + "px";
-				rowElem.style.height = this.m_table.rows[i].height + "px";
+				rowElem.style.height = this.m_table.rows[idx].height + "px";
 				rowElem.style.left = this.elem.scrollLeft + "px";
-				rowElem.style.top = this.m_table.rows[i].top + this.elem.scrollTop + "px";
+				rowElem.style.top = this.m_table.rows[idx].top + "px";
 
 				contentArea.appendChild(rowElem);
 			}
@@ -570,7 +544,7 @@ var TableWgt = function () {
 			var startIndex = this.lowerBound(this.m_table.rows, dummyStartRow); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
 			var endIndex = startIndex;
 
-			for (; endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex
+			for (; endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex 
 
 			startIndex = Math.max(startIndex - 1, 0);
 

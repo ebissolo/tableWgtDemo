@@ -22,22 +22,22 @@ window.tableWgt = new TableWgt( "tableWgt", {
 			{
 				id: "wgt1",
 				cl: "GenericWgt",
-				opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }
+				opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }
 			}
 		],
 		[ // second row
 			{ 
 				id: "wgt2",
 				cl: "GenericWgt",
-				opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }
+				opt: { w: 500, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }
 			}
 		]
 	]
  }); 
 
 // Add Generic widgets
-let wgt1 = new GenericWgt( "wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt );
-let wgt2 = new GenericWgt( "wgt2", { w: 800, h: 100, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt );
+let wgt1 = new GenericWgt( "wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }, tableWgt );
+let wgt2 = new GenericWgt( "wgt2", { w: 800, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }, tableWgt );
 
 tableWgt.model = model;
 

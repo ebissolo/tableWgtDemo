@@ -65,14 +65,6 @@ export default class TableWgt {
 		return wgts;	
 	}
 
-	// renderRowsPrototypes( contentArea ) {
-	// 	for( let i = 0; i < this.clusterSize; i++ ) {
-	// 		let div = document.createElement( "div" );
-	// 		div.classList.add( "row" );
-	// 		contentArea.appendChild( div );
-	// 	}
-	// }
-
 	defineGeometryAndScrollbar() {
 		let rowNumber = this.wgts.length; // from table widget
 		let tableModel = this.model;
@@ -111,9 +103,6 @@ export default class TableWgt {
 		const div = document.createElement( "div" );
 		div.id = this.id + "_contentArea";
 		div.style.height = totalHeight + "px";
-
-		//this.renderRowsPrototypes( div );
-
 		this.elem.appendChild( div );
 
 		if( this.scrollbar == null ) { // add scrollbar
@@ -149,6 +138,7 @@ export default class TableWgt {
 	lowerBound( rows, row ) {
 		for( let i = 0; i < rows.length; i++ ) {
 			if( rows[i].top > row.top ) {
+				console.log( "lower bound selects row: " + i );
 				return i;
 			}
 		}  
@@ -183,7 +173,8 @@ export default class TableWgt {
 					//protos.rows.splice( j, 1 ); // cpp: protos.rows.push_back(row); ??
 													 //      r = protos.rows.erase(r);
 					protos.rows.push( row );
-					protos.rows.splice( j, 1 );
+					//protos.rows.splice( j, 1 );
+					protos.rows.shift();
 					// j++;
 					continue;
 				}
@@ -239,32 +230,17 @@ export default class TableWgt {
 		}
 	}
 
-	// getRowElement( row, bounds ) {
-	// 	const { width, height, left, top } = bounds;
-
-	// 	let div = document.createElement( "div" );
-	// 	div.classList.add( "row" );
-
-	// 	for( let i = 0; i < row.rowWidgets.length; i++ ) {
-	// 		div.style.width = width + "px";
-	// 		div.style.height = height + "px";
-	// 		div.style.left = left + "px";
-	// 		div.style.top = top + "px";
-	// 		div.appendChild( row.rowWidgets[i].elem );
-	// 	}
-	// 	return div;
-	// }
-
 	renderRowElements() {
 		let contentArea = document.getElementById( this.id + "_contentArea" );
 		for( let i = 0; i < this.rowsToRender.length; i++ ) {
 			let rowElem = this.rowsToRender[i];
+			let idx = parseInt( rowElem.getAttribute( "row-index" ) );
 			
 			// bounds
 			rowElem.style.width = this.width + "px";
-			rowElem.style.height = this.m_table.rows[i].height + "px";
+			rowElem.style.height = this.m_table.rows[idx].height + "px";
 			rowElem.style.left = this.elem.scrollLeft + "px";
-			rowElem.style.top = ( this.m_table.rows[i].top + this.elem.scrollTop ) + "px";
+			rowElem.style.top = ( this.m_table.rows[idx].top ) + "px";
 
 			contentArea.appendChild( rowElem );
 		}
@@ -394,7 +370,7 @@ export default class TableWgt {
 		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow ); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
 		let endIndex = startIndex;
 
-		for(;endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex
+		for(;endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex 
 
 		startIndex = Math.max( startIndex - 1, 0 );
 
