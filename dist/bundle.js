@@ -107,18 +107,18 @@ window.tableWgt = new _TableWgt2.default("tableWgt", {
 	{
 		id: "wgt1",
 		cl: "GenericWgt",
-		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }
+		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }
 	}], [// second row
 	{
 		id: "wgt2",
 		cl: "GenericWgt",
-		opt: { w: 500, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }
+		opt: { w: 500, h: 140, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }
 	}]]
 });
 
 // Add Generic widgets
-var wgt1 = new _GenericWgt2.default("wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "#a3a3c2", rowOccupied: 0 }, tableWgt);
-var wgt2 = new _GenericWgt2.default("wgt2", { w: 800, h: 140, x: 0, y: 0, bgcolor: "#ff9999", rowOccupied: 1 }, tableWgt);
+var wgt1 = new _GenericWgt2.default("wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt);
+var wgt2 = new _GenericWgt2.default("wgt2", { w: 800, h: 140, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt);
 
 tableWgt.model = _data.model;
 
@@ -402,6 +402,8 @@ var TableWgt = function () {
 		key: "renderRowElements",
 		value: function renderRowElements() {
 			var contentArea = document.getElementById(this.id + "_contentArea");
+			var fragment = document.createDocumentFragment();
+
 			for (var i = 0; i < this.rowsToRender.length; i++) {
 				var rowElem = this.rowsToRender[i];
 				var idx = parseInt(rowElem.getAttribute("row-index"));
@@ -412,8 +414,9 @@ var TableWgt = function () {
 				rowElem.style.left = this.elem.scrollLeft + "px";
 				rowElem.style.top = this.m_table.rows[idx].top + "px";
 
-				contentArea.appendChild(rowElem);
+				fragment.appendChild(rowElem);
 			}
+			contentArea.appendChild(fragment);
 		}
 	}, {
 		key: "getElementFromRowProto",

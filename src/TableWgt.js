@@ -232,6 +232,8 @@ export default class TableWgt {
 
 	renderRowElements() {
 		let contentArea = document.getElementById( this.id + "_contentArea" );
+		let fragment = document.createDocumentFragment();
+
 		for( let i = 0; i < this.rowsToRender.length; i++ ) {
 			let rowElem = this.rowsToRender[i];
 			let idx = parseInt( rowElem.getAttribute( "row-index" ) );
@@ -242,8 +244,9 @@ export default class TableWgt {
 			rowElem.style.left = this.elem.scrollLeft + "px";
 			rowElem.style.top = ( this.m_table.rows[idx].top ) + "px";
 
-			contentArea.appendChild( rowElem );
+			fragment.appendChild( rowElem );
 		}
+		contentArea.appendChild( fragment );
 	}
 
 	getElementFromRowProto( row ) {
