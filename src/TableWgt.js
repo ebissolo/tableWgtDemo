@@ -2,9 +2,7 @@ import TableGeometry from "./TableGeometry.js";
 import RowPrototype from "./RowPrototype.js";
 import RowPrototypes from "./RowPrototypes.js";
 import GenericWgt from "./GenericWgt.js";
-// import JMScrollbar from "./JMScrollbar.js";
-// import PerfectScrollbar from "perfect-scrollbar";
-import PerfectScrollbar from "../lib/perfect-scrollbar"
+import PerfectScrollbar from "../lib/perfect-scrollbar";
 
 
 export default class TableWgt {
@@ -19,8 +17,6 @@ export default class TableWgt {
 		this.id = this.elem.id = id;
 		this.clusterSize = 4;
 
-		this.rowsToRender = [];
-
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
 
@@ -32,7 +28,6 @@ export default class TableWgt {
 		// Ref
 		this.m_table = new TableGeometry();
 		this.m_rowPrototypes = [];
-		//this.m_protoClonedWgts = [];
 
 		pushWidget( this );
 	}
@@ -42,8 +37,11 @@ export default class TableWgt {
 		for( let i = 0; i < this.m_table.rows.length; i++ ) {
 			maxContentHeight += this.m_table.rows[i].height;
 		}
+
 		this.scrollbar = new PerfectScrollbar( this.elem );
+
 		this.elem.addEventListener( "ps-scroll-y", () => {
+			clearTimeout( this.timer );
 			this.scrollTo( this.elem.scrollTop );
 		} );
 	}
@@ -53,7 +51,10 @@ export default class TableWgt {
 			this.wgts = [];
 		this.wgts.push( wgt );
 	}
-
+	
+	/**
+	 * @param  {} idx
+	 */
 	getWidgetsOfRow( idx ) {
 		let wgts = [];
 
@@ -112,9 +113,8 @@ export default class TableWgt {
 
 	initPrototypesAndGeometry() {
 		let rowNumber = this.wgts.length; // from table widget
-		//let tableHeight = this.height;
 
-		this.m_rowPrototypes = []; // eq to clear()
+		this.m_rowPrototypes = [];
 
 		for( let i = 0; i < rowNumber; i++ ) {
 			let proto = new RowPrototype();
@@ -138,13 +138,17 @@ export default class TableWgt {
 	lowerBound( rows, row ) {
 		for( let i = 0; i < rows.length; i++ ) {
 			if( rows[i].top > row.top ) {
-				console.log( "lower bound selects row: " + i );
 				return i;
 			}
 		}  
 	}
-
+	
+	/**
+	 * @param  {} startIndex
+	 * @param  {} endIndex
+	 */
 	checkOutOfViewPrototypes( startIndex, endIndex ) {
+
 		for( let i = 0; i < this.m_rowPrototypes.length; i++ ) { 
 			let protos = this.m_rowPrototypes[i];
 			for( let j = 0; j < protos.rows.length; ) {
@@ -155,27 +159,11 @@ export default class TableWgt {
 				}
 
 				if ( row.row < startIndex ) {
-					/**
-					 *  cpp: row.free = true;
-						UninstallRuntimeBackground(row.row);
-						row.freeRow(viewController);
-						viewController->unregisterDelegate(row.row);
-						row.row = -1;
-
-						protos.rows.push_back(row);
-						r = protos.rows.erase(r);
-						continue;
-					 */
 					row.free = true;
-					row.freeRow() // do nothing
-					//row.unregisterDelegate();
+					row.freeRow() // do nothing by now ?? doubt
 					row.row = -1;
-					//protos.rows.splice( j, 1 ); // cpp: protos.rows.push_back(row); ??
-													 //      r = protos.rows.erase(r);
 					protos.rows.push( row );
-					//protos.rows.splice( j, 1 );
 					protos.rows.shift();
-					// j++;
 					continue;
 				}
 
@@ -184,8 +172,7 @@ export default class TableWgt {
 						let row = protos.rows[k];
 
 						row.free = true;
-						row.freeRow(); // do nothing
-						//row.unregisterDelegate(); //?
+						row.freeRow(); // do nothing by now ?? doubt
 						row.row = -1;
 					}
 					break;
@@ -196,29 +183,26 @@ export default class TableWgt {
 		}
 	}
 
-	clone( wgts, idx ) {
-		let clones = [];
-
-		console.log( "--> cloning widget !" );
+	/**
+	 * @param  {} rowType
+	 * @param  {} idx
+	 */
+	cloneRow( rowType, idx ) {
+		let r = new RowPrototype();
+		let wgts = this.rowPrototypes[rowType]
 
 		for( let i = 0; i < wgts.length; i++ ) {
 			let id = wgts[i].id + idx;
 			let cl = wgts[i].cl;
 			let opt = wgts[i].opt;
 
+			// Hard code
 			if ( cl == "GenericWgt" ) {
 				cl = GenericWgt;
 			}
 
-			let newInstance = new cl( id, opt, this );
-			clones.push( newInstance );
+			r.rowWidgets.push( new cl( id, opt, this ) );
 		}
-		return clones;
-	}
-
-	cloneRow( rowType, idx ) {
-		let r = new RowPrototype();
-		r.rowWidgets = this.clone( this.rowPrototypes[rowType], idx );
 		return r;
 	}
 
@@ -230,47 +214,48 @@ export default class TableWgt {
 		}
 	}
 
-	renderRowElements() {
+	/**
+	 * @param  {} rows
+	 */
+	renderRowElements( rows ) {
 		let contentArea = document.getElementById( this.id + "_contentArea" );
 		let fragment = document.createDocumentFragment();
 
-		for( let i = 0; i < this.rowsToRender.length; i++ ) {
-			let rowElem = this.rowsToRender[i];
-			let idx = parseInt( rowElem.getAttribute( "row-index" ) );
-			
+		for( let row in rows ) {
+			let proto = rows[row];
+			let rowElem = document.createElement( "div" );
+
+			rowElem.classList.add( "row" );
+
 			// bounds
 			rowElem.style.width = this.width + "px";
-			rowElem.style.height = this.m_table.rows[idx].height + "px";
+			rowElem.style.height = this.m_table.rows[proto.row].height + "px";
 			rowElem.style.left = this.elem.scrollLeft + "px";
-			rowElem.style.top = ( this.m_table.rows[idx].top ) + "px";
+			rowElem.style.top = ( this.m_table.rows[proto.row].top ) + "px";
+
+			// append widgets
+			for( let j = 0; j < proto.rowWidgets.length; j++ ) {
+				rowElem.appendChild( proto.rowWidgets[j].elem );
+			}
 
 			fragment.appendChild( rowElem );
 		}
 		contentArea.appendChild( fragment );
 	}
 
-	getElementFromRowProto( row ) {
-		let div = document.createElement( "div" );
-		div.classList.add( "row" );
-		div.setAttribute( "row-index", row.row );
-
-		for( let i = 0; i < row.rowWidgets.length; i++ ) {
-			div.appendChild( row.rowWidgets[i].elem );
-		}
-		return div;
-	}
-
+	/**
+	 * @param  {} startIndex
+	 * @param  {} endIndex
+	 */
 	clonePrototypes( startIndex, endIndex ) {
-		let protos;
 		let isChanged = false;
-
-		console.log( "-------------------------------" )
+		let rowsToRender = [];
 
 		for ( let i = startIndex; i < endIndex; i++ ) {
 
 			let modelRow = this.model[i+1];
 			let rowType = parseInt( modelRow["_t"] );
-			protos = this.m_rowPrototypes[rowType];
+			let protos = this.m_rowPrototypes[rowType];
 
 			if ( protos.iterator == protos.rows.length )  { // scanIterator
 				let r = this.cloneRow( rowType, i );
@@ -285,68 +270,42 @@ export default class TableWgt {
 					let lastRow = protos.rows[protos.rows.length - 1];
 
 					if ( lastRow.free ) {
-						protos.rows.splice( protos.iterator, 0, lastRow );
-						protos.rows.pop(); // cpp: protos.rows.removeLast();
+						let r = this.cloneRow( rowType, i ); // reinstance with used id !!!
+
+						protos.rows.pop();
+						protos.rows.unshift( r );
 					} else {
 						let r = this.cloneRow( rowType, i );
 
-						protos.rows.splice( i, 0, r );
+						protos.rows.splice( protos.iterator, 0, r ); // replace row proto
 					}
 				}
 			}
 
 			let row = protos.rows[protos.iterator];
 
-			let left = 0; // temp
-			let top = this.m_table.rows[i].top;
-			let height = this.m_table.rows[i].height;
-			let width = this.width;
-
-			let wgts = row.rowWidgets;
-
 			if ( row.free ) {
 				row.free = false;
 				row.row = i;
-				
-				let rowIndex = i;
-
-				if( this.rowsToRender.length != this.clusterSize ) {
-					this.rowsToRender.push( this.getElementFromRowProto( row ) );
-				} else {
-					if( row.row < parseInt( this.rowsToRender[0].getAttribute( "row-index" ) ) ) {
-						this.rowsToRender.pop();
-						this.rowsToRender.unshift( this.getElementFromRowProto( row ) );
-					} else if( row.row > parseInt( this.rowsToRender[this.clusterSize - 1].getAttribute( "row-index" ) ) ) {
-						this.rowsToRender.shift();
-						this.rowsToRender.push( this.getElementFromRowProto( row ) );
-					}
-				}
-
-				// Activation datalinks, multilanguage etc.
-				// ...
-
 				isChanged = true;
 			}
 
-			if( isChanged ) {
-
-				// Log
-				console.log( "------------- indexes in view:" );
-				for( let i = 0; i < this.rowsToRender.length; i++ ) {
-					console.log( "" + parseInt( this.rowsToRender[i].getAttribute( "row-index" ) ) );
-				}
-				console.log( "------------------------------" );
-
-				this.deleteRowElements();
-				this.renderRowElements();
-			}
-
+			rowsToRender.push( row );
 			protos.iterator++;
 		}
 
-		// Log
-		console.log( "from " + startIndex + "index to " + endIndex + "index." );
-		console.log( "------------------------------------------" );
+		if( isChanged ) {
+
+			// Log
+			console.log( "------------- indexes in view:" );
+			for( let i = startIndex; i < endIndex; i++ ) {
+				console.log( "" +  i );
+			}
+			console.log( "------------------------------" );
+
+			this.deleteRowElements();
+			this.renderRowElements( rowsToRender );
+		}
 	}
 
 	scrollBy( scrollXPos, scrollYPos ) {
@@ -393,13 +352,10 @@ export default class TableWgt {
 Object.defineProperty( TableWgt.prototype, "model",
 	{
 		get: function() {
-			console.log( "--> property get !" ); 
 			return this._model;
 		},
 		set: function( currentModel ) {
 			this._model = currentModel;
-			console.log( "--> property set ! call onModelChange() method !" );
-
 			this.onModelChange();
 		}
 	}

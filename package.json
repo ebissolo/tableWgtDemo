@@ -4,7 +4,7 @@
   "description": "#12706 - scrollTo runtime demo",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack-dev-server"
+    "dev": "webpack-dev-server --hot"
   },
   "author": "exor",
   "license": "ISC",

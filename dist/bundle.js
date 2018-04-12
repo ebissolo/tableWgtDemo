@@ -134,9 +134,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-// import JMScrollbar from "./JMScrollbar.js";
-// import PerfectScrollbar from "perfect-scrollbar";
-
 
 var _TableGeometry = __webpack_require__(2);
 
@@ -176,8 +173,6 @@ var TableWgt = function () {
 		this.id = this.elem.id = id;
 		this.clusterSize = 4;
 
-		this.rowsToRender = [];
-
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
 
@@ -189,7 +184,6 @@ var TableWgt = function () {
 		// Ref
 		this.m_table = new _TableGeometry2.default();
 		this.m_rowPrototypes = [];
-		//this.m_protoClonedWgts = [];
 
 		pushWidget(this);
 	}
@@ -203,8 +197,11 @@ var TableWgt = function () {
 			for (var i = 0; i < this.m_table.rows.length; i++) {
 				maxContentHeight += this.m_table.rows[i].height;
 			}
+
 			this.scrollbar = new _perfectScrollbar2.default(this.elem);
+
 			this.elem.addEventListener("ps-scroll-y", function () {
+				clearTimeout(_this.timer);
 				_this.scrollTo(_this.elem.scrollTop);
 			});
 		}
@@ -214,6 +211,11 @@ var TableWgt = function () {
 			if (this.wgts == null) this.wgts = [];
 			this.wgts.push(wgt);
 		}
+
+		/**
+   * @param  {} idx
+   */
+
 	}, {
 		key: "getWidgetsOfRow",
 		value: function getWidgetsOfRow(idx) {
@@ -277,9 +279,8 @@ var TableWgt = function () {
 		key: "initPrototypesAndGeometry",
 		value: function initPrototypesAndGeometry() {
 			var rowNumber = this.wgts.length; // from table widget
-			//let tableHeight = this.height;
 
-			this.m_rowPrototypes = []; // eq to clear()
+			this.m_rowPrototypes = [];
 
 			for (var i = 0; i < rowNumber; i++) {
 				var proto = new _RowPrototype2.default();
@@ -304,14 +305,20 @@ var TableWgt = function () {
 		value: function lowerBound(rows, row) {
 			for (var i = 0; i < rows.length; i++) {
 				if (rows[i].top > row.top) {
-					console.log("lower bound selects row: " + i);
 					return i;
 				}
 			}
 		}
+
+		/**
+   * @param  {} startIndex
+   * @param  {} endIndex
+   */
+
 	}, {
 		key: "checkOutOfViewPrototypes",
 		value: function checkOutOfViewPrototypes(startIndex, endIndex) {
+
 			for (var i = 0; i < this.m_rowPrototypes.length; i++) {
 				var protos = this.m_rowPrototypes[i];
 				for (var j = 0; j < protos.rows.length;) {
@@ -322,26 +329,11 @@ var TableWgt = function () {
 					}
 
 					if (row.row < startIndex) {
-						/**
-       *  cpp: row.free = true;
-      	UninstallRuntimeBackground(row.row);
-      	row.freeRow(viewController);
-      	viewController->unregisterDelegate(row.row);
-      	row.row = -1;
-      		protos.rows.push_back(row);
-      	r = protos.rows.erase(r);
-      	continue;
-       */
 						row.free = true;
-						row.freeRow(); // do nothing
-						//row.unregisterDelegate();
+						row.freeRow(); // do nothing by now ?? doubt
 						row.row = -1;
-						//protos.rows.splice( j, 1 ); // cpp: protos.rows.push_back(row); ??
-						//      r = protos.rows.erase(r);
 						protos.rows.push(row);
-						//protos.rows.splice( j, 1 );
 						protos.rows.shift();
-						// j++;
 						continue;
 					}
 
@@ -350,8 +342,7 @@ var TableWgt = function () {
 							var _row = protos.rows[k];
 
 							_row.free = true;
-							_row.freeRow(); // do nothing
-							//row.unregisterDelegate(); //?
+							_row.freeRow(); // do nothing by now ?? doubt
 							_row.row = -1;
 						}
 						break;
@@ -361,32 +352,30 @@ var TableWgt = function () {
 				protos.iterator = 0;
 			}
 		}
-	}, {
-		key: "clone",
-		value: function clone(wgts, idx) {
-			var clones = [];
 
-			console.log("--> cloning widget !");
+		/**
+   * @param  {} rowType
+   * @param  {} idx
+   */
+
+	}, {
+		key: "cloneRow",
+		value: function cloneRow(rowType, idx) {
+			var r = new _RowPrototype2.default();
+			var wgts = this.rowPrototypes[rowType];
 
 			for (var i = 0; i < wgts.length; i++) {
 				var id = wgts[i].id + idx;
 				var cl = wgts[i].cl;
 				var opt = wgts[i].opt;
 
+				// Hard code
 				if (cl == "GenericWgt") {
 					cl = _GenericWgt2.default;
 				}
 
-				var newInstance = new cl(id, opt, this);
-				clones.push(newInstance);
+				r.rowWidgets.push(new cl(id, opt, this));
 			}
-			return clones;
-		}
-	}, {
-		key: "cloneRow",
-		value: function cloneRow(rowType, idx) {
-			var r = new _RowPrototype2.default();
-			r.rowWidgets = this.clone(this.rowPrototypes[rowType], idx);
 			return r;
 		}
 	}, {
@@ -398,51 +387,55 @@ var TableWgt = function () {
 				contentArea.removeChild(contentArea.firstChild);
 			}
 		}
+
+		/**
+   * @param  {} rows
+   */
+
 	}, {
 		key: "renderRowElements",
-		value: function renderRowElements() {
+		value: function renderRowElements(rows) {
 			var contentArea = document.getElementById(this.id + "_contentArea");
 			var fragment = document.createDocumentFragment();
 
-			for (var i = 0; i < this.rowsToRender.length; i++) {
-				var rowElem = this.rowsToRender[i];
-				var idx = parseInt(rowElem.getAttribute("row-index"));
+			for (var row in rows) {
+				var proto = rows[row];
+				var rowElem = document.createElement("div");
+
+				rowElem.classList.add("row");
 
 				// bounds
 				rowElem.style.width = this.width + "px";
-				rowElem.style.height = this.m_table.rows[idx].height + "px";
+				rowElem.style.height = this.m_table.rows[proto.row].height + "px";
 				rowElem.style.left = this.elem.scrollLeft + "px";
-				rowElem.style.top = this.m_table.rows[idx].top + "px";
+				rowElem.style.top = this.m_table.rows[proto.row].top + "px";
+
+				// append widgets
+				for (var j = 0; j < proto.rowWidgets.length; j++) {
+					rowElem.appendChild(proto.rowWidgets[j].elem);
+				}
 
 				fragment.appendChild(rowElem);
 			}
 			contentArea.appendChild(fragment);
 		}
-	}, {
-		key: "getElementFromRowProto",
-		value: function getElementFromRowProto(row) {
-			var div = document.createElement("div");
-			div.classList.add("row");
-			div.setAttribute("row-index", row.row);
 
-			for (var i = 0; i < row.rowWidgets.length; i++) {
-				div.appendChild(row.rowWidgets[i].elem);
-			}
-			return div;
-		}
+		/**
+   * @param  {} startIndex
+   * @param  {} endIndex
+   */
+
 	}, {
 		key: "clonePrototypes",
 		value: function clonePrototypes(startIndex, endIndex) {
-			var protos = void 0;
 			var isChanged = false;
-
-			console.log("-------------------------------");
+			var rowsToRender = [];
 
 			for (var i = startIndex; i < endIndex; i++) {
 
 				var modelRow = this.model[i + 1];
 				var rowType = parseInt(modelRow["_t"]);
-				protos = this.m_rowPrototypes[rowType];
+				var protos = this.m_rowPrototypes[rowType];
 
 				if (protos.iterator == protos.rows.length) {
 					// scanIterator
@@ -457,68 +450,42 @@ var TableWgt = function () {
 						var lastRow = protos.rows[protos.rows.length - 1];
 
 						if (lastRow.free) {
-							protos.rows.splice(protos.iterator, 0, lastRow);
-							protos.rows.pop(); // cpp: protos.rows.removeLast();
-						} else {
-							var _r = this.cloneRow(rowType, i);
+							var _r = this.cloneRow(rowType, i); // reinstance with used id !!!
 
-							protos.rows.splice(i, 0, _r);
+							protos.rows.pop();
+							protos.rows.unshift(_r);
+						} else {
+							var _r2 = this.cloneRow(rowType, i);
+
+							protos.rows.splice(protos.iterator, 0, _r2); // replace row proto
 						}
 					}
 				}
 
 				var row = protos.rows[protos.iterator];
 
-				var left = 0; // temp
-				var top = this.m_table.rows[i].top;
-				var height = this.m_table.rows[i].height;
-				var width = this.width;
-
-				var wgts = row.rowWidgets;
-
 				if (row.free) {
 					row.free = false;
 					row.row = i;
-
-					var rowIndex = i;
-
-					if (this.rowsToRender.length != this.clusterSize) {
-						this.rowsToRender.push(this.getElementFromRowProto(row));
-					} else {
-						if (row.row < parseInt(this.rowsToRender[0].getAttribute("row-index"))) {
-							this.rowsToRender.pop();
-							this.rowsToRender.unshift(this.getElementFromRowProto(row));
-						} else if (row.row > parseInt(this.rowsToRender[this.clusterSize - 1].getAttribute("row-index"))) {
-							this.rowsToRender.shift();
-							this.rowsToRender.push(this.getElementFromRowProto(row));
-						}
-					}
-
-					// Activation datalinks, multilanguage etc.
-					// ...
-
 					isChanged = true;
 				}
 
-				if (isChanged) {
-
-					// Log
-					console.log("------------- indexes in view:");
-					for (var _i2 = 0; _i2 < this.rowsToRender.length; _i2++) {
-						console.log("" + parseInt(this.rowsToRender[_i2].getAttribute("row-index")));
-					}
-					console.log("------------------------------");
-
-					this.deleteRowElements();
-					this.renderRowElements();
-				}
-
+				rowsToRender.push(row);
 				protos.iterator++;
 			}
 
-			// Log
-			console.log("from " + startIndex + "index to " + endIndex + "index.");
-			console.log("------------------------------------------");
+			if (isChanged) {
+
+				// Log
+				console.log("------------- indexes in view:");
+				for (var _i2 = startIndex; _i2 < endIndex; _i2++) {
+					console.log("" + _i2);
+				}
+				console.log("------------------------------");
+
+				this.deleteRowElements();
+				this.renderRowElements(rowsToRender);
+			}
 		}
 	}, {
 		key: "scrollBy",
@@ -573,13 +540,10 @@ var TableWgt = function () {
 exports.default = TableWgt;
 Object.defineProperty(TableWgt.prototype, "model", {
 	get: function get() {
-		console.log("--> property get !");
 		return this._model;
 	},
 	set: function set(currentModel) {
 		this._model = currentModel;
-		console.log("--> property set ! call onModelChange() method !");
-
 		this.onModelChange();
 	}
 });
@@ -2004,6 +1968,26 @@ model[9] = {
 };
 model[10] = {
    _t: 1,
+   _v: ["#00ff00", "#ffff00"]
+};
+model[11] = {
+   _t: 0,
+   _v: ["#00ff00", "#ffff00"]
+};
+model[12] = {
+   _t: 0,
+   _v: ["#00ff00", "#ffff00"]
+};
+model[13] = {
+   _t: 1,
+   _v: ["#00ff00", "#ffff00"]
+};
+model[14] = {
+   _t: 1,
+   _v: ["#00ff00", "#ffff00"]
+};
+model[15] = {
+   _t: 0,
    _v: ["#00ff00", "#ffff00"]
 };
 
