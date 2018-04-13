@@ -18,10 +18,10 @@ export default class TableWgt {
 		this.rowNumber = options.rowNumber;
 		this.rowsProps = options.rowsProps;
 		this.clusterSize = 4;
+		this.rowPrototypes = [];
 
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
-		this.rowPrototypes = [];
 		this.globalStrokeWidth = 1;
 		
 		document.body.appendChild( this.elem );

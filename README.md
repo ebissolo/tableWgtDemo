@@ -1,18 +1,8 @@
 # Table widget demo
 
-
-## Install
-
-#### npm
+#### Download from sources and install
 
 The best way to install and use this.demo is with npm.
-
-```
-$ npm install
-```
-
-#### Download from sources
-
 If you want to use the development version of the plugin, build from source
 manually. The development version may be unstable.
 
