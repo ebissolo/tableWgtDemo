@@ -21,8 +21,7 @@ export default class TableWgt {
 
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
-
-		this.rowPrototypes = options.rowPrototypes;
+		this.rowPrototypes = [];
 		this.globalStrokeWidth = 1;
 		
 		document.body.appendChild( this.elem );
@@ -136,6 +135,9 @@ export default class TableWgt {
 
 			proto.rowWidgets = wgts;
 			protos.rows.push( proto ); // in runtime it's used qt "push_back"
+
+			// Store original prototypes
+			this.rowPrototypes.push( proto );
 		}
 	}
 	
@@ -153,24 +155,35 @@ export default class TableWgt {
 
 	/**
 	 * @param  {} rowType
+	 * @param  {} wgtIdx
+	 * @param  {} rowIdx
+	 */
+	getId( rowType, wgtIdx, rowIdx ) {
+		let originalProtoId = this.rowPrototypes[rowType].rowWidgets[wgtIdx].id;
+		return rowIdx != 0 ? originalProtoId + rowIdx : originalProtoId; // NB: make sure that is a valid jm4web id
+	}
+
+	/**
+	 * @param  {} rowType
 	 * @param  {} idx
 	 */
-	cloneRow( rowType, idx, rowProto, willSwap ) {
+	cloneRow( rowType, idx, rowProto ) {
 		let r = new RowPrototype();
 		let wgts = rowProto.rowWidgets;
 
 		for( let i = 0; i < wgts.length; i++ ) {
-			// let id = willSwap ? wgts[i].id : wgts[i].id + idx;
-			let id = wgts[i].id;
+
+			let id = this.getId( rowType, i, idx );
 			let cl = wgts[i].cl;
 			let opt = wgts[i].opt;
 
-			// Hard code
+			// Hard coded
 			if ( cl == "GenericWgt" ) {
 				cl = GenericWgt;
 			}
 
-			r.rowWidgets.push( new cl( id, opt, this ) );
+			let newInstance = new cl( id, opt, this );
+			r.rowWidgets.push( newInstance );
 		}
 		return r;
 	}
@@ -257,6 +270,7 @@ export default class TableWgt {
 	clonePrototypes( startIndex, endIndex ) {
 		let isChanged = false;
 		let rowsToRender = [];
+		let addClone = false;
 
 		for ( let i = startIndex; i < endIndex; i++ ) {
 
@@ -269,7 +283,6 @@ export default class TableWgt {
 
 				protos.rows.push( r );
 				protos.iterator = protos.rows.length - 1;
-
 			} else {
 				let row = protos.rows[protos.iterator];
 
@@ -277,7 +290,7 @@ export default class TableWgt {
 					let lastRow = protos.rows[protos.rows.length - 1];
 
 					if ( lastRow.free ) {
-						let r = this.cloneRow( rowType, i, lastRow, true );
+						let r = this.cloneRow( rowType, i, lastRow );
 
 						// just swap
 						protos.rows.splice( protos.iterator, 0, r );
@@ -288,14 +301,25 @@ export default class TableWgt {
 						// append a new row
 						protos.rows.splice( protos.iterator, 0, r );
 					}
+				} else {
+					addClone = true;
 				}
 			}
 
 			let row = protos.rows[protos.iterator];
 
 			if ( row.free ) {
+				if ( addClone ) {
+					row = this.cloneRow( rowType, i, row );
+				}
+
 				row.free = false;
 				row.row = i;
+
+				if ( addClone ) {
+					protos.rows[protos.iterator] = row;
+				}
+
 				isChanged = true;
 			}
 
