@@ -158,12 +158,13 @@ export default class TableWgt {
 	 * @param  {} rowType
 	 * @param  {} idx
 	 */
-	cloneRow( rowType, idx ) {
+	cloneRow( rowType, idx, rowProto, willSwap ) {
 		let r = new RowPrototype();
-		let wgts = this.rowPrototypes[rowType]
+		let wgts = rowProto.rowWidgets;
 
 		for( let i = 0; i < wgts.length; i++ ) {
-			let id = wgts[i].id + idx;
+			// let id = willSwap ? wgts[i].id : wgts[i].id + idx;
+			let id = wgts[i].id;
 			let cl = wgts[i].cl;
 			let opt = wgts[i].opt;
 
@@ -194,22 +195,19 @@ export default class TableWgt {
 
 		for( let row in rows ) {
 			let proto = rows[row];
-			let rowElem = document.createElement( "div" );
-
-			rowElem.classList.add( "row" );
-
-			// bounds
-			rowElem.style.width = this.width + "px";
-			rowElem.style.height = this.m_table.rows[proto.row].height + "px";
-			rowElem.style.left = this.elem.scrollLeft + "px";
-			rowElem.style.top = ( this.m_table.rows[proto.row].top ) + "px";
 
 			// append widgets
 			for( let j = 0; j < proto.rowWidgets.length; j++ ) {
-				rowElem.appendChild( proto.rowWidgets[j].elem );
-			}
+				let wgt = proto.rowWidgets[j];
 
-			fragment.appendChild( rowElem );
+				// bounds
+				wgt.elem.style.width = this.width + "px";
+				wgt.elem.style.height = this.m_table.rows[proto.row].height + "px";
+				wgt.elem.style.left = this.elem.scrollLeft + "px";
+				wgt.elem.style.top = ( this.m_table.rows[proto.row].top ) + "px";
+
+				fragment.appendChild( wgt.elem );
+			}
 		}
 		contentArea.appendChild( fragment );
 	}
@@ -234,9 +232,9 @@ export default class TableWgt {
 					row.freeRow() // do nothing by now ?? doubt
 					row.row = -1;
 
-					console.log( "INCREMENTED PROTOS ROWS --> check out of view" );
 					protos.rows.push( row );
-					protos.rows.shift();
+					protos.rows.splice( j, 1 );
+
 					continue;
 				}
 
@@ -271,9 +269,8 @@ export default class TableWgt {
 			let protos = this.m_rowPrototypes[rowType];
 
 			if ( protos.iterator == protos.rows.length )  { // scanIterator
-				let r = this.cloneRow( rowType, i );
+				let r = this.cloneRow( rowType, i, protos.rows[0] );
 
-				console.log( "INCREMENTED PROTOS ROWS --> clonePrototypes" );
 				protos.rows.push( r );
 				protos.iterator = protos.rows.length - 1;
 
@@ -284,15 +281,16 @@ export default class TableWgt {
 					let lastRow = protos.rows[protos.rows.length - 1];
 
 					if ( lastRow.free ) {
-						let r = this.cloneRow( rowType, i ); // reinstance with used id !!!
+						let r = this.cloneRow( rowType, i, lastRow, true );
 
+						// just swap
+						protos.rows.splice( protos.iterator, 0, r );
 						protos.rows.pop();
-						protos.rows.unshift( r );
 					} else {
-						let r = this.cloneRow( rowType, i );
+						let r = this.cloneRow( rowType, i, protos.rows[0] );
 
-						console.log( "INCREMENTED PROTOS ROWS --> clonePrototypes" );
-						protos.rows.splice( protos.iterator, 0, r ); // replace row proto
+						// append a new row
+						protos.rows.splice( protos.iterator, 0, r );
 					}
 				}
 			}

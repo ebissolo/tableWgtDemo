@@ -3,9 +3,13 @@ export default class GenericWgt {
 		this.bgcolor = options.bgcolor;
 		this.rowOccupied = options.rowOccupied;
 		this.parentWgt = parentWgt;
+		
+		this.cl = "GenericWgt";
+		this.opt = options;
 
 		this.elem = document.createElement( "div" );
 
+		// Bounds
 		this.width = options.w;
 		this.height = options.h;
 		this.x = options.x;

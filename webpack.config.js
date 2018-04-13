@@ -6,7 +6,7 @@ module.exports = {
     output: {
         path: path.join(__dirname, 'dist'),
 		filename: 'bundle.js',
-		publicPath: 'dist/'
+		publicPath: "/dist"
     },
     entry: {
 		path: path.join(__dirname, 'src/main.js')
@@ -25,6 +25,7 @@ module.exports = {
 	devtool: 'source-map',
     devServer: {
 		open: true,
-		port: 3000
+		port: 3000,
+		host: "0.0.0.0"
     },
 };
