@@ -8,7 +8,7 @@
 The best way to install and use this.demo is with npm.
 
 ```
-$ npm install perfect-scrollbar
+$ npm install
 ```
 
 #### Download from sources
