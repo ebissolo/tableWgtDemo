@@ -14,6 +14,9 @@ export default class TableWgt {
 		this.left = options.left;
 		this.top = options.top;
 		this.id = this.elem.id = id;
+
+		this.rowNumber = options.rowNumber;
+		this.rowsProps = options.rowsProps;
 		this.clusterSize = 4;
 
 		this.elem.style.width = this.width + "px";
@@ -39,16 +42,13 @@ export default class TableWgt {
 	}
 
 	addScrollbar( scrollbarOptions ) {
-		let maxContentHeight = 0;
-		for( let i = 0; i < this.m_table.rows.length; i++ ) {
-			maxContentHeight += this.m_table.rows[i].height;
-		}
-
 		this.scrollbar = new PerfectScrollbar( this.elem );
 
 		this.elem.addEventListener( "ps-scroll-y", () => {
-			clearTimeout( this.timer );
 			this.scrollTo( this.elem.scrollTop );
+		} );
+		this.elem.addEventListener( "ps-scroll-x", () => {
+			this.scrollBy( this.elem.scrollLeft );
 		} );
 	}
 	
@@ -76,13 +76,13 @@ export default class TableWgt {
 	}
 
 	defineGeometryAndScrollbar() {
-		let rowNumber = this.wgts.length; // from table widget
+		let rowNumber = this.rowNumber; // from table widget
 		let tableModel = this.model;
 		let prototypesHeights = [];
 
 		// Init heights
 		for( let i = 0; i < rowNumber; i++ ) {
-			prototypesHeights.push( this.wgts[i].height );
+			prototypesHeights.push( this.rowsProps[i] ); // Read it from gridGroupLayour properties
 		}
 
 		this.m_table.clear();
@@ -119,7 +119,7 @@ export default class TableWgt {
 	}
 
 	initPrototypesAndGeometry() {
-		let rowNumber = this.wgts.length; // from table widget
+		let rowNumber = this.rowNumber; // from table widget
 
 		this.m_rowPrototypes = [];
 
@@ -137,9 +137,6 @@ export default class TableWgt {
 			proto.rowWidgets = wgts;
 			protos.rows.push( proto ); // in runtime it's used qt "push_back"
 		}
-
-		this.scrollBy( 0 );
-		this.scrollTo( 0 );
 	}
 	
 	/**
@@ -196,14 +193,13 @@ export default class TableWgt {
 		for( let row in rows ) {
 			let proto = rows[row];
 
-			// append widgets
 			for( let j = 0; j < proto.rowWidgets.length; j++ ) {
 				let wgt = proto.rowWidgets[j];
 
 				// bounds
-				wgt.elem.style.width = this.width + "px";
+				wgt.elem.style.width = wgt.w + "px";
 				wgt.elem.style.height = this.m_table.rows[proto.row].height + "px";
-				wgt.elem.style.left = this.elem.scrollLeft + "px";
+				wgt.elem.style.left = ( this.elem.scrollLeft + wgt.x ) + "px";
 				wgt.elem.style.top = ( this.m_table.rows[proto.row].top ) + "px";
 
 				fragment.appendChild( wgt.elem );
@@ -315,10 +311,9 @@ export default class TableWgt {
 				console.log( "" +  i );
 			}
 			console.log( "------------------------------" );
-
-			this.deleteRowElements();
 			
 			requestAnimationFrame( () => {
+				this.deleteRowElements();
 				this.renderRowElements( rowsToRender );
 			} );
 		}
@@ -326,9 +321,16 @@ export default class TableWgt {
 	
 	/**
 	 * @param  {} scrollXPos
+	 * @param  {} scrollYPos
 	 */
-	scrollBy( scrollXPos ) {
+	scrollBy( scrollXPos, scrollYPos ) {
 		console.log( "--> scrollBy() call !!" );
+
+		// do something ...
+		// let contentArea = document.getElementById( this.id + "_contentArea" );
+		// contentArea.scrollLeft = scrollXPos + "px";
+
+		this.scrollTo( scrollYPos );
 	}
 	
 	/**
@@ -367,6 +369,7 @@ export default class TableWgt {
 
 		this.defineGeometryAndScrollbar();
 		this.initPrototypesAndGeometry();
+		this.scrollBy( 0, 0 );
 	}
 }
 
