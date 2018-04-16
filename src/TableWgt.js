@@ -378,7 +378,7 @@ export default class TableWgt {
 
 		this.defineGeometryAndScrollbar();
 		this.initPrototypesAndGeometry();
-		this.scrollTo( 0 );
+		this.scrollTo( this.elem.scrollTop );
 	}
 }
 
