@@ -46,9 +46,6 @@ export default class TableWgt {
 		this.elem.addEventListener( "ps-scroll-y", () => {
 			this.scrollTo( this.elem.scrollTop );
 		} );
-		this.elem.addEventListener( "ps-scroll-x", () => {
-			this.scrollBy( this.elem.scrollLeft );
-		} );
 	}
 	
 	/**
@@ -56,8 +53,8 @@ export default class TableWgt {
 	 */
 	addWidget( wgt ) {
 		if( this.wgts == null )
-			this.wgts = [];
-		this.wgts.push( wgt );
+			this.wgts = {};
+		this.wgts[wgt.id] = wgt;
 	}
 	
 	/**
@@ -66,12 +63,12 @@ export default class TableWgt {
 	getWidgetsOfRow( idx ) {
 		let wgts = [];
 
-		for( let i = 0; i < this.wgts.length; i++ ) {
-			if( this.wgts[i].rowOccupied == idx ) {
-				wgts.push( this.wgts[i] );
-			}
+		for( let key in this.wgts ) {
+			let wgt = this.wgts[key];
+			if( wgt.rowOcc == idx )
+				wgts.push( wgt );
 		}
-		return wgts;	
+		return wgts;
 	}
 
 	defineGeometryAndScrollbar() {
@@ -121,6 +118,7 @@ export default class TableWgt {
 		let rowNumber = this.rowNumber; // from table widget
 
 		this.m_rowPrototypes = [];
+		this.rowPrototypes = [];
 
 		for( let i = 0; i < rowNumber; i++ ) {
 			let proto = new RowPrototype();
@@ -177,10 +175,10 @@ export default class TableWgt {
 			let cl = wgts[i].cl;
 			let opt = wgts[i].opt;
 
-			// Hard coded
-			if ( cl == "GenericWgt" ) {
-				cl = GenericWgt;
-			}
+			opt.rowOcc = idx;
+
+			// Class name
+			cl = cl == "GenericWgt" ? GenericWgt : cl;
 
 			let newInstance = new cl( id, opt, this );
 			r.rowWidgets.push( newInstance );
@@ -212,7 +210,6 @@ export default class TableWgt {
 				// bounds
 				wgt.elem.style.width = wgt.w + "px";
 				wgt.elem.style.height = this.m_table.rows[proto.row].height + "px";
-				wgt.elem.style.left = ( this.elem.scrollLeft + wgt.x ) + "px";
 				wgt.elem.style.top = ( this.m_table.rows[proto.row].top ) + "px";
 
 				fragment.appendChild( wgt.elem );
@@ -238,7 +235,7 @@ export default class TableWgt {
 
 				if ( row.row < startIndex ) {
 					row.free = true;
-					row.freeRow() // do nothing by now ?? doubt
+					row.freeRow(); // do nothing by now ?? doubt
 					row.row = -1;
 
 					protos.rows.push( row );
@@ -278,7 +275,7 @@ export default class TableWgt {
 			let rowType = parseInt( modelRow["_t"] );
 			let protos = this.m_rowPrototypes[rowType];
 
-			if ( protos.iterator == protos.rows.length )  { // scanIterator
+			if ( protos.iterator == protos.rows.length )  {
 				let r = this.cloneRow( rowType, i, protos.rows[0] );
 
 				protos.rows.push( r );
@@ -308,6 +305,7 @@ export default class TableWgt {
 
 			let row = protos.rows[protos.iterator];
 
+			// Forced clone
 			if ( row.free ) {
 				if ( addClone ) {
 					row = this.cloneRow( rowType, i, row );
@@ -344,20 +342,6 @@ export default class TableWgt {
 	}
 	
 	/**
-	 * @param  {} scrollXPos
-	 * @param  {} scrollYPos
-	 */
-	scrollBy( scrollXPos, scrollYPos ) {
-		console.log( "--> scrollBy() call !!" );
-
-		// do something ...
-		// let contentArea = document.getElementById( this.id + "_contentArea" );
-		// contentArea.scrollLeft = scrollXPos + "px";
-
-		this.scrollTo( scrollYPos );
-	}
-	
-	/**
 	 * @param  {} scrollPos
 	 */
 	scrollTo( scrollPos ) {
@@ -375,6 +359,7 @@ export default class TableWgt {
 			top: 0,
 			height: 0
 		};
+
 		dummyStartRow.top = startPos;
 
 		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow ); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
@@ -393,7 +378,7 @@ export default class TableWgt {
 
 		this.defineGeometryAndScrollbar();
 		this.initPrototypesAndGeometry();
-		this.scrollBy( 0, 0 );
+		this.scrollTo( 0 );
 	}
 }
 

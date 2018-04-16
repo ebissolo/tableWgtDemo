@@ -1,7 +1,7 @@
 export default class GenericWgt {
 	constructor( id, options, parentWgt ) {
 		this.bgcolor = options.bgcolor;
-		this.rowOccupied = options.rowOccupied;
+		this.rowOcc = options.rowOcc;
 		this.parentWgt = parentWgt;
 		
 		this.cl = "GenericWgt";
