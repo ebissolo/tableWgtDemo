@@ -17,7 +17,6 @@ export default class TableWgt {
 
 		this.rowNumber = options.rowNumber;
 		this.rowsProps = options.rowsProps;
-		this.clusterSize = 4;
 		this.rowPrototypes = [];
 
 		this.elem.style.width = this.width + "px";
@@ -39,9 +38,12 @@ export default class TableWgt {
 		div.id = this.id + "_contentArea";
 		this.elem.appendChild( div );
 	}
-
+	
+	/**
+	 * @param  {} scrollbarOptions
+	 */
 	addScrollbar( scrollbarOptions ) {
-		this.scrollbar = new PerfectScrollbar( this.elem );
+		this.scrollbar = new PerfectScrollbar( this.elem, { wheelSpeed: 4 } );
 
 		this.elem.addEventListener( "ps-scroll-y", () => {
 			this.scrollTo( this.elem.scrollTop );
@@ -71,45 +73,51 @@ export default class TableWgt {
 		return wgts;
 	}
 
+	/**
+	 * @param  {} prop
+	 * @param  {} value
+	 */
+	updateContentArea( prop, value ) {
+		let contentArea = document.getElementById( this.id + "_contentArea" );
+
+		if ( contentArea.style[prop] != null ) {
+			contentArea.style[prop] = value + "px";
+		}
+	}
+
 	defineGeometryAndScrollbar() {
 		let rowNumber = this.rowNumber; // from table widget
 		let tableModel = this.model;
 		let prototypesHeights = [];
+		let top = 0;
+		let totalHeight = 0;
 
 		// Init heights
 		for( let i = 0; i < rowNumber; i++ ) {
-			prototypesHeights.push( this.rowsProps[i] ); // Read it from gridGroupLayour properties
+			prototypesHeights.push( this.rowsProps[i] );
 		}
 
 		this.m_table.clear();
-		
-		let top = 0;
-		let totalHeight = 0;
 
 		// Init rows geometry
 		for( let i = 0; i < tableModel.length - 1; i++ ) {
 			let type = parseInt( tableModel[i+1]["_t"] );
-			let row = {			// cpp: TableGeometry::Row& row
-				type: null,
-				top: 0,
-				height: 0
+			let row = {
+				type: type,
+				top: top,
+				height: prototypesHeights[type]
 			};
 
-			row.top = top;
-			row.type = type;
-			row.height = prototypesHeights[type];
-			top += row.height;
-
 			this.m_table.rows.push(row);
-
+			
+			top += row.height;
 			totalHeight += row.height;
 		}
 
-		// Modifies contentArea height
-		let contentArea = document.getElementById( this.id + "_contentArea" );
-		contentArea.style.height = totalHeight + "px";
+		this.updateContentArea( "height", totalHeight );
 
-		if( this.scrollbar == null ) { // add scrollbar
+		// Add scrollbar
+		if( this.scrollbar == null ) {
 			this.addScrollbar();
 		}
 	}
@@ -129,7 +137,7 @@ export default class TableWgt {
 			proto.free = true;
 			proto.row = -1;
 
-			let wgts = this.getWidgetsOfRow( i );
+			let wgts = this.getWidgetsOfRow( i ); // Diff in jm4web
 
 			proto.rowWidgets = wgts;
 			protos.rows.push( proto ); // in runtime it's used qt "push_back"
@@ -144,7 +152,7 @@ export default class TableWgt {
 	 * @param  {} row
 	 */
 	lowerBound( rows, row ) {
-		for( let i = 0; i < rows.length; i++ ) {
+		for( let i = 0; i < rows.length; i++ ) { // qt qLowerBound funct call
 			if( rows[i].top > row.top ) {
 				return i;
 			}
@@ -162,6 +170,16 @@ export default class TableWgt {
 	}
 
 	/**
+	 * @param  {} classString
+	 */
+	getClass( classString ) {
+		switch( classString ) {
+			case "GenericWgt":
+				return GenericWgt;
+		}
+	}
+
+	/**
 	 * @param  {} rowType
 	 * @param  {} idx
 	 */
@@ -170,17 +188,17 @@ export default class TableWgt {
 		let wgts = rowProto.rowWidgets;
 
 		for( let i = 0; i < wgts.length; i++ ) {
-
 			let id = this.getId( rowType, i, idx );
 			let cl = wgts[i].cl;
 			let opt = wgts[i].opt;
+			let newInstance;
 
 			opt.rowOcc = idx;
 
 			// Class name
-			cl = cl == "GenericWgt" ? GenericWgt : cl;
+			cl = this.getClass( "GenericWgt" );
 
-			let newInstance = new cl( id, opt, this );
+			newInstance = new cl( id, opt, this );
 			r.rowWidgets.push( newInstance );
 		}
 		return r;
@@ -189,7 +207,8 @@ export default class TableWgt {
 	deleteRowElements() {
 		let contentArea = document.getElementById( this.id + "_contentArea" );
 		let childrenLen = contentArea.childNodes.length;
-		for( let i = 0; i < childrenLen; i++ ) {		
+
+		for( let i = 0; i < childrenLen; i++ ) {	
 			contentArea.removeChild( contentArea.firstChild );
 		}
 	}
@@ -320,7 +339,6 @@ export default class TableWgt {
 
 				isChanged = true;
 			}
-
 			rowsToRender.push( row );
 			protos.iterator++;
 		}
@@ -340,7 +358,39 @@ export default class TableWgt {
 			} );
 		}
 	}
-	
+
+	getMinMaxIndex( startPos, endPos ) {
+		let dummyStartRow = {
+			type: null,
+			top: startPos,
+			height: 0
+		};
+
+		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow );
+		let endIndex = startIndex;
+
+		for(;endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {}
+
+		startIndex = Math.max( startIndex - 1, 0 );
+
+		let clusterSize = endIndex - startIndex + 1;
+		let clusterBlock = Math.round( clusterSize / 3 );
+		let maxValidRowIndex = this.m_table.rows.length - 1;
+
+		// Before
+		console.log( "startIndex: " + startIndex );
+		console.log( "endIndex: " + endIndex );
+
+		startIndex = ( ( startIndex - clusterBlock ) >= 0 && ( startIndex - clusterBlock ) < startIndex ) ? ( startIndex - clusterBlock ) : startIndex;
+		endIndex = ( ( endIndex + clusterBlock ) <= maxValidRowIndex && ( endIndex + clusterBlock ) > endIndex ) ? ( endIndex + clusterBlock ) : endIndex;
+
+		// After
+		console.log( "startIndexInCluster: " + startIndex );
+		console.log( "endIndexInCluster: " + endIndex );
+
+		return { startIndex, endIndex };
+	}
+
 	/**
 	 * @param  {} scrollPos
 	 */
@@ -348,26 +398,9 @@ export default class TableWgt {
 		console.log( "--> scrollTo() call !!" );
 
 		let viewHeight = this.height;
-		let tableModel = this.model;
-		let lastRow = this.m_table.rows[this.m_table.rows.length-1];
-
-		let startPos = scrollPos - this.globalStrokeWidth; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize; ?? doubt
+		let startPos = scrollPos - this.globalStrokeWidth;
 		let endPos = scrollPos + viewHeight;
-
-		let dummyStartRow = { 	  // cpp: TableGeometry::Row& row
-			type: null,
-			top: 0,
-			height: 0
-		};
-
-		dummyStartRow.top = startPos;
-
-		let startIndex = this.lowerBound( this.m_table.rows, dummyStartRow ); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
-		let endIndex = startIndex;
-
-		for(;endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex 
-
-		startIndex = Math.max( startIndex - 1, 0 );
+		let { startIndex, endIndex } = this.getMinMaxIndex( startPos, endPos );
 
 		this.checkOutOfViewPrototypes( startIndex, endIndex );
 		this.clonePrototypes( startIndex, endIndex );
