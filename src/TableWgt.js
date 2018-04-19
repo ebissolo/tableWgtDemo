@@ -2,7 +2,7 @@ import TableGeometry from "./TableGeometry.js";
 import RowPrototype from "./RowPrototype.js";
 import RowPrototypes from "./RowPrototypes.js";
 import GenericWgt from "./GenericWgt.js";
-import PerfectScrollbar from "../lib/perfect-scrollbar";
+import PerfectScrollbar from "../lib/perfect-scrollbar"; // Custom
 
 export default class TableWgt {
 	constructor( id, options ) {
@@ -182,6 +182,7 @@ export default class TableWgt {
 	/**
 	 * @param  {} rowType
 	 * @param  {} idx
+	 * @param  {} rowProto
 	 */
 	cloneRow( rowType, idx, rowProto ) {
 		let r = new RowPrototype();
@@ -254,7 +255,6 @@ export default class TableWgt {
 
 				if ( row.row < startIndex ) {
 					row.free = true;
-					row.freeRow(); // do nothing by now ?? doubt
 					row.row = -1;
 
 					protos.rows.push( row );
@@ -266,9 +266,7 @@ export default class TableWgt {
 				if ( row.row >= endIndex ) {
 					for( let k = j; k < protos.rows.length; k++ ) {
 						let row = protos.rows[k];
-
 						row.free = true;
-						row.freeRow(); // do nothing by now ?? doubt
 						row.row = -1;
 					}
 					break;
@@ -306,7 +304,7 @@ export default class TableWgt {
 					let lastRow = protos.rows[protos.rows.length - 1];
 
 					if ( lastRow.free ) {
-						let r = this.cloneRow( rowType, i, lastRow );
+						let r = this.cloneRow( rowType, i, lastRow ); // in runtime this is not a clone
 
 						// just swap
 						protos.rows.splice( protos.iterator, 0, r );
@@ -326,6 +324,7 @@ export default class TableWgt {
 
 			// Forced clone
 			if ( row.free ) {
+
 				if ( addClone ) {
 					row = this.cloneRow( rowType, i, row );
 				}
@@ -373,20 +372,24 @@ export default class TableWgt {
 
 		startIndex = Math.max( startIndex - 1, 0 );
 
+		// Note: Simulate cluster with "Precached Pages" table widget properties !!!
+
+		/*
 		let clusterSize = endIndex - startIndex + 1;
 		let clusterBlock = Math.round( clusterSize / 3 );
 		let maxValidRowIndex = this.m_table.rows.length - 1;
 
-		// Before
+		Before
 		console.log( "startIndex: " + startIndex );
 		console.log( "endIndex: " + endIndex );
 
 		startIndex = ( ( startIndex - clusterBlock ) >= 0 && ( startIndex - clusterBlock ) < startIndex ) ? ( startIndex - clusterBlock ) : startIndex;
 		endIndex = ( ( endIndex + clusterBlock ) <= maxValidRowIndex && ( endIndex + clusterBlock ) > endIndex ) ? ( endIndex + clusterBlock ) : endIndex;
 
-		// After
+		After
 		console.log( "startIndexInCluster: " + startIndex );
 		console.log( "endIndexInCluster: " + endIndex );
+		*/
 
 		return { startIndex, endIndex };
 	}
@@ -395,10 +398,9 @@ export default class TableWgt {
 	 * @param  {} scrollPos
 	 */
 	scrollTo( scrollPos ) {
-		console.log( "--> scrollTo() call !!" );
-
 		let viewHeight = this.height;
-		let startPos = scrollPos - this.globalStrokeWidth;
+		// let pagePrecachedSize = this.pagePrecachedSize * ( 0.5 * viewHeight );
+		let startPos = scrollPos - this.globalStrokeWidth; // - pagePrecachedSize;
 		let endPos = scrollPos + viewHeight;
 		let { startIndex, endIndex } = this.getMinMaxIndex( startPos, endPos );
 
@@ -415,7 +417,7 @@ export default class TableWgt {
 	}
 }
 
-// Setter/Getter
+// NB: this getter / setter deve essere aggiunto al table proxy widget
 Object.defineProperty( TableWgt.prototype, "model",
 	{
 		get: function() {

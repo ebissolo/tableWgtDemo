@@ -62,7 +62,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
+/******/ 	__webpack_require__.p = "/dist";
 /******/
 /******/
 /******/ 	// Load entry module and return exports
@@ -88,6 +88,35 @@ var _data = __webpack_require__(7);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+// Polyfill
+(function () {
+	var lastTime = 0;
+	var vendors = ["ms", "moz", "webkit", "o"];
+
+	for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+		window.requestAnimationFrame = window[vendors[x] + "RequestAnimationFrame"];
+		window.cancelAnimationFrame = window[vendors[x] + "CancelAnimationFrame"] || window[vendors[x] + "CancelRequestAnimationFrame"];
+	}
+
+	if (!window.requestAnimationFrame) {
+		window.requestAnimationFrame = function (callback, element) {
+			var currTime = new Date().getTime();
+			var timeToCall = Math.min(Math.max(0, 16 - (currTime - lastTime)), 1000);
+			var id = window.setTimeout(function () {
+				callback(currTime + timeToCall);
+			}, timeToCall);
+			lastTime = currTime + timeToCall;
+			return id;
+		};
+	}
+
+	if (!window.cancelAnimationFrame) {
+		window.cancelAnimationFrame = function (id) {
+			clearTimeout(id);
+		};
+	}
+})();
+
 window.wgts = [];
 window.pushWidget = function (wgt) {
 	wgts.push(wgt);
@@ -100,25 +129,20 @@ window.getWidgetById = function (id) {
 	}
 };
 
-window.tableWgt = new _TableWgt2.default("tableWgt", {
-	width: 500,
-	height: 300,
-	rowPrototypes: [[// first row
-	{
-		id: "wgt1",
-		cl: "GenericWgt",
-		opt: { w: 500, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }
-	}], [// second row
-	{
-		id: "wgt2",
-		cl: "GenericWgt",
-		opt: { w: 500, h: 140, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }
-	}]]
-});
+// Table widget
+window.tableWgt = new _TableWgt2.default("tableWgt", { width: 500, height: 500, rowNumber: 3, rowsProps: [100, 140, 40] });
 
-// Add Generic widgets
-var wgt1 = new _GenericWgt2.default("wgt1", { w: 800, h: 100, x: 0, y: 0, bgcolor: "red", rowOccupied: 0 }, tableWgt);
-var wgt2 = new _GenericWgt2.default("wgt2", { w: 800, h: 140, x: 0, y: 0, bgcolor: "green", rowOccupied: 1 }, tableWgt);
+// First row
+var wgt1 = new _GenericWgt2.default("wgt1", { w: 300, h: 100, x: 0, y: 0, bgcolor: "red", rowOcc: 0 }, tableWgt);
+var wgt2 = new _GenericWgt2.default("wgt2", { w: 300, h: 100, x: 300, y: 0, bgcolor: "blue", rowOcc: 0 }, tableWgt);
+
+// Second row
+var wgt3 = new _GenericWgt2.default("wgt3", { w: 400, h: 140, x: 0, y: 100, bgcolor: "green", rowOcc: 1 }, tableWgt);
+var wgt4 = new _GenericWgt2.default("wgt4", { w: 200, h: 140, x: 400, y: 100, bgcolor: "orange", rowOcc: 1 }, tableWgt);
+
+// Third row
+var wgt5 = new _GenericWgt2.default("wgt5", { w: 100, h: 40, x: 0, y: 240, bgcolor: "gray", rowOcc: 2 }, tableWgt);
+var wgt6 = new _GenericWgt2.default("wgt6", { w: 500, h: 40, x: 100, y: 240, bgcolor: "yellow", rowOcc: 2 }, tableWgt);
 
 tableWgt.model = _data.model;
 
@@ -159,6 +183,8 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+// Custom
+
 var TableWgt = function () {
 	function TableWgt(id, options) {
 		_classCallCheck(this, TableWgt);
@@ -171,12 +197,13 @@ var TableWgt = function () {
 		this.left = options.left;
 		this.top = options.top;
 		this.id = this.elem.id = id;
-		this.clusterSize = 4;
+
+		this.rowNumber = options.rowNumber;
+		this.rowsProps = options.rowsProps;
+		this.rowPrototypes = [];
 
 		this.elem.style.width = this.width + "px";
 		this.elem.style.height = this.height + "px";
-
-		this.rowPrototypes = options.rowPrototypes;
 		this.globalStrokeWidth = 1;
 
 		document.body.appendChild(this.elem);
@@ -196,20 +223,19 @@ var TableWgt = function () {
 			div.id = this.id + "_contentArea";
 			this.elem.appendChild(div);
 		}
+
+		/**
+   * @param  {} scrollbarOptions
+   */
+
 	}, {
 		key: "addScrollbar",
 		value: function addScrollbar(scrollbarOptions) {
 			var _this = this;
 
-			var maxContentHeight = 0;
-			for (var i = 0; i < this.m_table.rows.length; i++) {
-				maxContentHeight += this.m_table.rows[i].height;
-			}
-
-			this.scrollbar = new _perfectScrollbar2.default(this.elem);
+			this.scrollbar = new _perfectScrollbar2.default(this.elem, { wheelSpeed: 4 });
 
 			this.elem.addEventListener("ps-scroll-y", function () {
-				clearTimeout(_this.timer);
 				_this.scrollTo(_this.elem.scrollTop);
 			});
 		}
@@ -221,8 +247,8 @@ var TableWgt = function () {
 	}, {
 		key: "addWidget",
 		value: function addWidget(wgt) {
-			if (this.wgts == null) this.wgts = [];
-			this.wgts.push(wgt);
+			if (this.wgts == null) this.wgts = {};
+			this.wgts[wgt.id] = wgt;
 		}
 
 		/**
@@ -234,64 +260,72 @@ var TableWgt = function () {
 		value: function getWidgetsOfRow(idx) {
 			var wgts = [];
 
-			for (var i = 0; i < this.wgts.length; i++) {
-				if (this.wgts[i].rowOccupied == idx) {
-					wgts.push(this.wgts[i]);
-				}
+			for (var key in this.wgts) {
+				var wgt = this.wgts[key];
+				if (wgt.rowOcc == idx) wgts.push(wgt);
 			}
 			return wgts;
+		}
+
+		/**
+   * @param  {} prop
+   * @param  {} value
+   */
+
+	}, {
+		key: "updateContentArea",
+		value: function updateContentArea(prop, value) {
+			var contentArea = document.getElementById(this.id + "_contentArea");
+
+			if (contentArea.style[prop] != null) {
+				contentArea.style[prop] = value + "px";
+			}
 		}
 	}, {
 		key: "defineGeometryAndScrollbar",
 		value: function defineGeometryAndScrollbar() {
-			var rowNumber = this.wgts.length; // from table widget
+			var rowNumber = this.rowNumber; // from table widget
 			var tableModel = this.model;
 			var prototypesHeights = [];
+			var top = 0;
+			var totalHeight = 0;
 
 			// Init heights
 			for (var i = 0; i < rowNumber; i++) {
-				prototypesHeights.push(this.wgts[i].height);
+				prototypesHeights.push(this.rowsProps[i]);
 			}
 
 			this.m_table.clear();
 
-			var top = 0;
-			var totalHeight = 0;
-
 			// Init rows geometry
 			for (var _i = 0; _i < tableModel.length - 1; _i++) {
 				var type = parseInt(tableModel[_i + 1]["_t"]);
-				var row = { // cpp: TableGeometry::Row& row
-					type: null,
-					top: 0,
-					height: 0
+				var row = {
+					type: type,
+					top: top,
+					height: prototypesHeights[type]
 				};
-
-				row.top = top;
-				row.type = type;
-				row.height = prototypesHeights[type];
-				top += row.height;
 
 				this.m_table.rows.push(row);
 
+				top += row.height;
 				totalHeight += row.height;
 			}
 
-			// Modifies contentArea height
-			var contentArea = document.getElementById(this.id + "_contentArea");
-			contentArea.style.height = totalHeight + "px";
+			this.updateContentArea("height", totalHeight);
 
+			// Add scrollbar
 			if (this.scrollbar == null) {
-				// add scrollbar
 				this.addScrollbar();
 			}
 		}
 	}, {
 		key: "initPrototypesAndGeometry",
 		value: function initPrototypesAndGeometry() {
-			var rowNumber = this.wgts.length; // from table widget
+			var rowNumber = this.rowNumber; // from table widget
 
 			this.m_rowPrototypes = [];
+			this.rowPrototypes = [];
 
 			for (var i = 0; i < rowNumber; i++) {
 				var proto = new _RowPrototype2.default();
@@ -302,14 +336,14 @@ var TableWgt = function () {
 				proto.free = true;
 				proto.row = -1;
 
-				var wgts = this.getWidgetsOfRow(i);
+				var wgts = this.getWidgetsOfRow(i); // Diff in jm4web
 
 				proto.rowWidgets = wgts;
 				protos.rows.push(proto); // in runtime it's used qt "push_back"
-			}
 
-			this.scrollBy(0);
-			this.scrollTo(0);
+				// Store original prototypes
+				this.rowPrototypes.push(proto);
+			}
 		}
 
 		/**
@@ -321,6 +355,7 @@ var TableWgt = function () {
 		key: "lowerBound",
 		value: function lowerBound(rows, row) {
 			for (var i = 0; i < rows.length; i++) {
+				// qt qLowerBound funct call
 				if (rows[i].top > row.top) {
 					return i;
 				}
@@ -329,26 +364,55 @@ var TableWgt = function () {
 
 		/**
    * @param  {} rowType
+   * @param  {} wgtIdx
+   * @param  {} rowIdx
+   */
+
+	}, {
+		key: "getId",
+		value: function getId(rowType, wgtIdx, rowIdx) {
+			var originalProtoId = this.rowPrototypes[rowType].rowWidgets[wgtIdx].id;
+			return rowIdx != 0 ? originalProtoId + rowIdx : originalProtoId; // NB: make sure that is a valid jm4web id
+		}
+
+		/**
+   * @param  {} classString
+   */
+
+	}, {
+		key: "getClass",
+		value: function getClass(classString) {
+			switch (classString) {
+				case "GenericWgt":
+					return _GenericWgt2.default;
+			}
+		}
+
+		/**
+   * @param  {} rowType
    * @param  {} idx
+   * @param  {} rowProto
    */
 
 	}, {
 		key: "cloneRow",
-		value: function cloneRow(rowType, idx) {
+		value: function cloneRow(rowType, idx, rowProto) {
 			var r = new _RowPrototype2.default();
-			var wgts = this.rowPrototypes[rowType];
+			var wgts = rowProto.rowWidgets;
 
 			for (var i = 0; i < wgts.length; i++) {
-				var id = wgts[i].id + idx;
+				var id = this.getId(rowType, i, idx);
 				var cl = wgts[i].cl;
 				var opt = wgts[i].opt;
+				var newInstance = void 0;
 
-				// Hard code
-				if (cl == "GenericWgt") {
-					cl = _GenericWgt2.default;
-				}
+				opt.rowOcc = idx;
 
-				r.rowWidgets.push(new cl(id, opt, this));
+				// Class name
+				cl = this.getClass("GenericWgt");
+
+				newInstance = new cl(id, opt, this);
+				r.rowWidgets.push(newInstance);
 			}
 			return r;
 		}
@@ -357,6 +421,7 @@ var TableWgt = function () {
 		value: function deleteRowElements() {
 			var contentArea = document.getElementById(this.id + "_contentArea");
 			var childrenLen = contentArea.childNodes.length;
+
 			for (var i = 0; i < childrenLen; i++) {
 				contentArea.removeChild(contentArea.firstChild);
 			}
@@ -374,22 +439,17 @@ var TableWgt = function () {
 
 			for (var row in rows) {
 				var proto = rows[row];
-				var rowElem = document.createElement("div");
 
-				rowElem.classList.add("row");
-
-				// bounds
-				rowElem.style.width = this.width + "px";
-				rowElem.style.height = this.m_table.rows[proto.row].height + "px";
-				rowElem.style.left = this.elem.scrollLeft + "px";
-				rowElem.style.top = this.m_table.rows[proto.row].top + "px";
-
-				// append widgets
 				for (var j = 0; j < proto.rowWidgets.length; j++) {
-					rowElem.appendChild(proto.rowWidgets[j].elem);
-				}
+					var wgt = proto.rowWidgets[j];
 
-				fragment.appendChild(rowElem);
+					// bounds
+					wgt.elem.style.width = wgt.w + "px";
+					wgt.elem.style.height = this.m_table.rows[proto.row].height + "px";
+					wgt.elem.style.top = this.m_table.rows[proto.row].top + "px";
+
+					fragment.appendChild(wgt.elem);
+				}
 			}
 			contentArea.appendChild(fragment);
 		}
@@ -414,21 +474,18 @@ var TableWgt = function () {
 
 					if (row.row < startIndex) {
 						row.free = true;
-						row.freeRow(); // do nothing by now ?? doubt
 						row.row = -1;
 
-						console.log("INCREMENTED PROTOS ROWS --> check out of view");
 						protos.rows.push(row);
-						protos.rows.shift();
+						protos.rows.splice(j, 1);
+
 						continue;
 					}
 
 					if (row.row >= endIndex) {
 						for (var k = j; k < protos.rows.length; k++) {
 							var _row = protos.rows[k];
-
 							_row.free = true;
-							_row.freeRow(); // do nothing by now ?? doubt
 							_row.row = -1;
 						}
 						break;
@@ -451,6 +508,7 @@ var TableWgt = function () {
 
 			var isChanged = false;
 			var rowsToRender = [];
+			var addClone = false;
 
 			for (var i = startIndex; i < endIndex; i++) {
 
@@ -459,10 +517,8 @@ var TableWgt = function () {
 				var protos = this.m_rowPrototypes[rowType];
 
 				if (protos.iterator == protos.rows.length) {
-					// scanIterator
-					var r = this.cloneRow(rowType, i);
+					var r = this.cloneRow(rowType, i, protos.rows[0]);
 
-					console.log("INCREMENTED PROTOS ROWS --> clonePrototypes");
 					protos.rows.push(r);
 					protos.iterator = protos.rows.length - 1;
 				} else {
@@ -472,27 +528,40 @@ var TableWgt = function () {
 						var lastRow = protos.rows[protos.rows.length - 1];
 
 						if (lastRow.free) {
-							var _r = this.cloneRow(rowType, i); // reinstance with used id !!!
+							var _r = this.cloneRow(rowType, i, lastRow); // in runtime this is not a clone
 
+							// just swap
+							protos.rows.splice(protos.iterator, 0, _r);
 							protos.rows.pop();
-							protos.rows.unshift(_r);
 						} else {
-							var _r2 = this.cloneRow(rowType, i);
+							var _r2 = this.cloneRow(rowType, i, protos.rows[0]);
 
-							console.log("INCREMENTED PROTOS ROWS --> clonePrototypes");
-							protos.rows.splice(protos.iterator, 0, _r2); // replace row proto
+							// append a new row
+							protos.rows.splice(protos.iterator, 0, _r2);
 						}
+					} else {
+						addClone = true;
 					}
 				}
 
 				var row = protos.rows[protos.iterator];
 
+				// Forced clone
 				if (row.free) {
+
+					if (addClone) {
+						row = this.cloneRow(rowType, i, row);
+					}
+
 					row.free = false;
 					row.row = i;
+
+					if (addClone) {
+						protos.rows[protos.iterator] = row;
+					}
+
 					isChanged = true;
 				}
-
 				rowsToRender.push(row);
 				protos.iterator++;
 			}
@@ -506,22 +575,45 @@ var TableWgt = function () {
 				}
 				console.log("------------------------------");
 
-				this.deleteRowElements();
-
 				requestAnimationFrame(function () {
+					_this2.deleteRowElements();
 					_this2.renderRowElements(rowsToRender);
 				});
 			}
 		}
+	}, {
+		key: "getMinMaxIndex",
+		value: function getMinMaxIndex(startPos, endPos) {
+			var dummyStartRow = {
+				type: null,
+				top: startPos,
+				height: 0
+			};
 
-		/**
-   * @param  {} scrollXPos
+			var startIndex = this.lowerBound(this.m_table.rows, dummyStartRow);
+			var endIndex = startIndex;
+
+			for (; endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {}
+
+			startIndex = Math.max(startIndex - 1, 0);
+
+			// Note: Simulate cluster with "Precached Pages" table widget properties !!!
+
+			/*
+   let clusterSize = endIndex - startIndex + 1;
+   let clusterBlock = Math.round( clusterSize / 3 );
+   let maxValidRowIndex = this.m_table.rows.length - 1;
+   	Before
+   console.log( "startIndex: " + startIndex );
+   console.log( "endIndex: " + endIndex );
+   	startIndex = ( ( startIndex - clusterBlock ) >= 0 && ( startIndex - clusterBlock ) < startIndex ) ? ( startIndex - clusterBlock ) : startIndex;
+   endIndex = ( ( endIndex + clusterBlock ) <= maxValidRowIndex && ( endIndex + clusterBlock ) > endIndex ) ? ( endIndex + clusterBlock ) : endIndex;
+   	After
+   console.log( "startIndexInCluster: " + startIndex );
+   console.log( "endIndexInCluster: " + endIndex );
    */
 
-	}, {
-		key: "scrollBy",
-		value: function scrollBy(scrollXPos) {
-			console.log("--> scrollBy() call !!");
+			return { startIndex: startIndex, endIndex: endIndex };
 		}
 
 		/**
@@ -531,28 +623,14 @@ var TableWgt = function () {
 	}, {
 		key: "scrollTo",
 		value: function scrollTo(scrollPos) {
-			console.log("--> scrollTo() call !!");
-
 			var viewHeight = this.height;
-			var tableModel = this.model;
-			var lastRow = this.m_table.rows[this.m_table.rows.length - 1];
-
-			var startPos = scrollPos - this.globalStrokeWidth; // cpp: qreal startPos = _scrollPos - mo.GetGlobalStrokeWidth() - pagePrecachedSize; ?? doubt
+			// let pagePrecachedSize = this.pagePrecachedSize * ( 0.5 * viewHeight );
+			var startPos = scrollPos - this.globalStrokeWidth; // - pagePrecachedSize;
 			var endPos = scrollPos + viewHeight;
 
-			var dummyStartRow = { // cpp: TableGeometry::Row& row
-				type: null,
-				top: 0,
-				height: 0
-			};
-			dummyStartRow.top = startPos;
-
-			var startIndex = this.lowerBound(this.m_table.rows, dummyStartRow); // cpp: qLowerBound(m_table.rows, dummyStartRow) - m_table.rows.begin();
-			var endIndex = startIndex;
-
-			for (; endIndex < this.m_table.rows.length && this.m_table.rows[endIndex].top < endPos; endIndex++) {} // Computes endIndex 
-
-			startIndex = Math.max(startIndex - 1, 0);
+			var _getMinMaxIndex = this.getMinMaxIndex(startPos, endPos),
+			    startIndex = _getMinMaxIndex.startIndex,
+			    endIndex = _getMinMaxIndex.endIndex;
 
 			this.checkOutOfViewPrototypes(startIndex, endIndex);
 			this.clonePrototypes(startIndex, endIndex);
@@ -564,13 +642,14 @@ var TableWgt = function () {
 
 			this.defineGeometryAndScrollbar();
 			this.initPrototypesAndGeometry();
+			this.scrollTo(this.elem.scrollTop);
 		}
 	}]);
 
 	return TableWgt;
 }();
 
-// Setter/Getter
+// NB: this getter / setter deve essere aggiunto al table proxy widget
 
 
 exports.default = TableWgt;
@@ -647,7 +726,6 @@ var RowPrototype = function () {
 		key: "freeRow",
 		value: function freeRow() {
 			console.log("--> freeRow !");
-			// this.rowWidgets = [];
 		}
 	}]);
 
@@ -695,11 +773,15 @@ var GenericWgt = function GenericWgt(id, options, parentWgt) {
 	_classCallCheck(this, GenericWgt);
 
 	this.bgcolor = options.bgcolor;
-	this.rowOccupied = options.rowOccupied;
+	this.rowOcc = options.rowOcc;
 	this.parentWgt = parentWgt;
+
+	this.cl = "GenericWgt";
+	this.opt = options;
 
 	this.elem = document.createElement("div");
 
+	// Bounds
 	this.width = options.w;
 	this.height = options.h;
 	this.x = options.x;
@@ -1954,79 +2036,300 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 
 Object.defineProperty(exports, "__esModule", {
-   value: true
+    value: true
 });
 var model = [];
 
 model[0] = {
-   _h: [[["value"], ["text"]], // Row type 0
-   [["text"], ["value"]], // Row type 1
-   [["fill"], ["fill"]], // Row type 2
-   [["btn.fill"], ["btn.fill"]], // Row type 3
-   [["stroke-width"], ["fill"]] // Row type 4
-   ]
+    _h: [[["value"], ["text"]], // Row type 0
+    [["text"], ["value"]], // Row type 1
+    [["text1"], ["value1"]] // Row type 2
+    ]
 };
 model[1] = {
-   _t: 0,
-   _v: ["10", "This is a Label widget"]
+    _t: 1,
+    _v: ["10", "This is a Label widget"]
 };
 model[2] = {
-   _t: 1,
-   _v: ["This is an other Label widget", "55"]
+    _t: 1,
+    _v: ["This is an other Label widget", "55"]
 };
 model[3] = {
-   _t: 0,
-   _v: ["rgb(255,0,0)", "rgb(0,255,0)"]
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
 };
 model[4] = {
-   _t: 0,
-   _v: ["#ff0000", "#00ff00"]
+    _t: 0,
+    _v: ["rgb(255,0,0)", "rgb(0,255,0)"]
 };
 model[5] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 0,
+    _v: ["#ff0000", "#00ff00"]
 };
 model[6] = {
-   _t: 0,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[7] = {
-   _t: 0,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[8] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[9] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[10] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[11] = {
-   _t: 0,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[12] = {
-   _t: 0,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[13] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[14] = {
-   _t: 1,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
 model[15] = {
-   _t: 0,
-   _v: ["#00ff00", "#ffff00"]
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
 };
-
+model[16] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[16] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[17] = {
+    _t: 0,
+    _v: ["10", "This is a Label widget"]
+};
+model[18] = {
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
+};
+model[19] = {
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
+};
+model[20] = {
+    _t: 0,
+    _v: ["rgb(255,0,0)", "rgb(0,255,0)"]
+};
+model[21] = {
+    _t: 0,
+    _v: ["#ff0000", "#00ff00"]
+};
+model[22] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[23] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[24] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[25] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[26] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[27] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[28] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[29] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[30] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[31] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[32] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[33] = {
+    _t: 0,
+    _v: ["10", "This is a Label widget"]
+};
+model[34] = {
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
+};
+model[35] = {
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
+};
+model[36] = {
+    _t: 0,
+    _v: ["rgb(255,0,0)", "rgb(0,255,0)"]
+};
+model[37] = {
+    _t: 0,
+    _v: ["#ff0000", "#00ff00"]
+};
+model[38] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[39] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[40] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[41] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[42] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[43] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[44] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[45] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[46] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[47] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[48] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[49] = {
+    _t: 0,
+    _v: ["10", "This is a Label widget"]
+};
+model[50] = {
+    _t: 1,
+    _v: ["This is an other Label widget", "55"]
+};
+model[51] = {
+    _t: 2,
+    _v: ["This is an other Label widget", "55"]
+};
+model[52] = {
+    _t: 0,
+    _v: ["rgb(255,0,0)", "rgb(0,255,0)"]
+};
+model[53] = {
+    _t: 0,
+    _v: ["#ff0000", "#00ff00"]
+};
+model[54] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[55] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[56] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[57] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[58] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[59] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[60] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[61] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[62] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[63] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[64] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[65] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[66] = {
+    _t: 0,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[67] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[68] = {
+    _t: 2,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[69] = {
+    _t: 1,
+    _v: ["#00ff00", "#ffff00"]
+};
+model[70] = {
+    _t: 1,
+    _v: ["#00ff00", "#ffff00"]
+};
 exports.model = model;
 
 /***/ })
